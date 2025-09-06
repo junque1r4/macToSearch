@@ -1,0 +1,222 @@
+//
+//  AppDelegate.swift
+//  macToSearch
+//
+//  Created by MacBook on 06/09/2025.
+//
+
+import AppKit
+import SwiftUI
+import ScreenCaptureKit
+import CoreMedia
+
+class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOutput {
+    var overlayWindow: OverlayWindow?
+    var mainWindow: NSWindow?
+    var appState: AppState?
+    var hotkeyManager: HotkeyManager?
+    private var capturedImage: NSImage?
+    private var captureStream: SCStream?
+    
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Setup main window
+        setupMainWindow()
+        
+        // Setup overlay window
+        overlayWindow = OverlayWindow()
+        
+        // Setup hotkey callback
+        setupHotkeyCallback()
+    }
+    
+    func setupMainWindow() {
+        // Main window is created by SwiftUI WindowGroup
+        DispatchQueue.main.async {
+            self.mainWindow = NSApp.windows.first
+        }
+    }
+    
+    func setupHotkeyCallback() {
+        hotkeyManager?.captureCallback = { [weak self] in
+            self?.showDrawingOverlay()
+        }
+    }
+    
+    func showDrawingOverlay() {
+        guard let appState = appState else { return }
+        
+        Task { @MainActor in
+            // Hide overlay window completely before capture
+            self.overlayWindow?.orderOut(nil)
+            
+            // Wait a moment to ensure window is hidden
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+            
+            // Capture using SCStream like QuickRecorder
+            await captureScreenWithStream()
+            
+            // Show overlay after capture
+            if let screenshot = capturedImage {
+                appState.lastCapturedImage = screenshot
+                let drawingView = DrawingOverlayView(screenshot: screenshot)
+                self.overlayWindow?.showOverlay(with: drawingView, appState: appState)
+            } else {
+                // Fallback to simple capture
+                let fallbackScreenshot = captureSimpleScreenshot()
+                if let screenshot = fallbackScreenshot {
+                    appState.lastCapturedImage = screenshot
+                    let drawingView = DrawingOverlayView(screenshot: screenshot)
+                    self.overlayWindow?.showOverlay(with: drawingView, appState: appState)
+                } else {
+                    print("All capture methods failed, showing overlay without screenshot")
+                    let drawingView = DrawingOverlayView(screenshot: nil)
+                    self.overlayWindow?.showOverlay(with: drawingView, appState: appState)
+                }
+            }
+        }
+    }
+    
+    // Simple screenshot method that captures everything on screen
+    func captureSimpleScreenshot() -> NSImage? {
+        print("Capturing simple screenshot...")
+        
+        // Get main screen
+        guard let screen = NSScreen.main else {
+            print("No main screen found")
+            return nil
+        }
+        
+        // First try: CGDisplay capture (most reliable, captures everything)
+        let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
+        if let cgImage = CGDisplayCreateImage(displayID.uint32Value) {
+            print("CGDisplay capture successful")
+            return NSImage(cgImage: cgImage, size: screen.frame.size)
+        }
+        
+        // Second try: CGWindowList with all windows
+        let screenRect = screen.frame
+        if let cgImage = CGWindowListCreateImage(
+            screenRect,
+            .optionAll,  // Capture ALL windows, not just on-screen
+            kCGNullWindowID,
+            .bestResolution
+        ) {
+            print("CGWindowList capture successful")
+            return NSImage(cgImage: cgImage, size: screenRect.size)
+        }
+        
+        print("Simple screenshot failed")
+        return nil
+    }
+    
+    func hideDrawingOverlay() {
+        print("=== hideDrawingOverlay called ===")
+        
+        // Hide the overlay window
+        overlayWindow?.hideOverlay()
+        print("Overlay window hidden")
+        
+        // Update app state
+        appState?.showSearchOverlay = false
+        print("=== hideDrawingOverlay completed ===")
+    }
+    
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false // Keep app running even when window is closed
+    }
+    
+    // MARK: - SCStream Capture (like QuickRecorder)
+    
+    private func captureScreenWithStream() async {
+        do {
+            // Get available content - using same method as QuickRecorder  
+            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+            
+            guard let display = content.displays.first else {
+                print("No displays found")
+                return
+            }
+            
+            print("Found \(content.displays.count) displays and \(content.windows.count) windows")
+            
+            // List all windows for debugging
+            for window in content.windows {
+                if let app = window.owningApplication {
+                    print("Window: \(window.title ?? "untitled") - App: \(app.applicationName) - Bundle: \(app.bundleIdentifier)")
+                }
+            }
+            
+            // Create filter to capture everything on display
+            let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
+            
+            // Configure stream
+            let configuration = SCStreamConfiguration()
+            configuration.width = Int(display.width)
+            configuration.height = Int(display.height)
+            configuration.minimumFrameInterval = CMTime(value: 1, timescale: 1)
+            configuration.pixelFormat = kCVPixelFormatType_32BGRA
+            configuration.showsCursor = false
+            configuration.queueDepth = 1
+            
+            // Create and start stream
+            captureStream = SCStream(filter: filter, configuration: configuration, delegate: self)
+            
+            if let stream = captureStream {
+                try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: .main)
+                try await stream.startCapture()
+                
+                // Wait for frame to be captured
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                
+                // Stop capture
+                try? await stream.stopCapture()
+                captureStream = nil
+            }
+        } catch {
+            print("Stream capture failed: \(error)")
+            handlePermissionError(error)
+        }
+    }
+    
+    // MARK: - SCStreamOutput Protocol
+    
+    func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
+        guard type == .screen else { return }
+        
+        // Convert sample buffer to NSImage
+        if let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+            let ciImage = CIImage(cvImageBuffer: imageBuffer)
+            let context = CIContext()
+            
+            if let cgImage = context.createCGImage(ciImage, from: ciImage.extent) {
+                capturedImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+                print("Successfully captured frame from stream")
+            }
+        }
+    }
+    
+    // MARK: - Permission Handling
+    
+    private func handlePermissionError(_ error: Error) {
+        if let streamError = error as? SCStreamError {
+            switch streamError.code {
+            case .userDeclined:
+                DispatchQueue.main.async {
+                    let alert = NSAlert()
+                    alert.messageText = "Permission Required"
+                    alert.informativeText = "macToSearch needs screen recording permissions to capture your screen."
+                    alert.addButton(withTitle: "Open Settings")
+                    alert.addButton(withTitle: "Cancel")
+                    
+                    if alert.runModal() == .alertFirstButtonReturn {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                }
+            default:
+                print("Stream error: \(error.localizedDescription)")
+            }
+        }
+    }
+}

@@ -7,12 +7,17 @@
 
 import SwiftUI
 import SwiftData
+import AppKit
 
 @main
 struct macToSearchApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var appState = AppState()
+    @StateObject private var hotkeyManager = HotkeyManager()
+    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            SearchHistory.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -26,7 +31,23 @@ struct macToSearchApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(appState)
+                .environmentObject(hotkeyManager)
+                .onAppear {
+                    // Share instances with AppDelegate after initialization
+                    appDelegate.appState = appState
+                    appDelegate.hotkeyManager = hotkeyManager
+                    appDelegate.setupHotkeyCallback()
+                }
         }
         .modelContainer(sharedModelContainer)
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
+        
+        Settings {
+            SettingsView()
+                .environmentObject(appState)
+                .environmentObject(hotkeyManager)
+        }
     }
 }
