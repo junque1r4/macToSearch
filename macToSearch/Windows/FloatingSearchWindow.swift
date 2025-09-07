@@ -318,6 +318,7 @@ struct FloatingSearchInterface: View {
     private func searchWithGemini(text: String, image: NSImage?) async {
         isLoading = true
         
+        // Add the new user message to the UI immediately
         await MainActor.run {
             messages.append(MinimalChatMessage(
                 content: text.isEmpty && image != nil ? "What's in this image?" : text,
@@ -327,16 +328,17 @@ struct FloatingSearchInterface: View {
         }
         
         do {
-            let result: String
-            
-            if let image = image {
-                result = try await geminiService.searchWithImage(
-                    image,
-                    text: text.isEmpty ? "What's in this image?" : text
-                )
-            } else {
-                result = try await geminiService.searchWithText(text)
+            // Convert existing messages to the format expected by GeminiService
+            let messageHistory = messages.dropLast().map { message in
+                (content: message.content, image: message.image, isUser: message.isUser)
             }
+            
+            // Use the new searchWithHistory method to maintain conversation context
+            let result = try await geminiService.searchWithHistory(
+                Array(messageHistory),
+                newText: text.isEmpty && image != nil ? "What's in this image?" : text,
+                newImage: image
+            )
             
             await MainActor.run {
                 messages.append(MinimalChatMessage(

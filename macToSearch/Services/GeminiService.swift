@@ -33,6 +33,91 @@ class GeminiService: ObservableObject {
         return try await sendRequest(prompt: prompt)
     }
     
+    func searchWithHistory(_ messages: [(content: String, image: NSImage?, isUser: Bool)], newText: String, newImage: NSImage? = nil) async throws -> String {
+        guard !apiKey.isEmpty else {
+            throw GeminiError.missingAPIKey
+        }
+        
+        // Build conversation history
+        var contents: [[String: Any]] = []
+        
+        // Add existing messages to history
+        for message in messages {
+            let role = message.isUser ? "user" : "model"
+            var parts: [[String: Any]] = []
+            
+            // Add text part if not empty
+            if !message.content.isEmpty {
+                parts.append(["text": message.content])
+            }
+            
+            // Add image part if present (only for user messages)
+            if let image = message.image, message.isUser {
+                if let imageBase64 = try? imageToBase64(image) {
+                    parts.append([
+                        "inline_data": [
+                            "mime_type": "image/jpeg",
+                            "data": imageBase64
+                        ]
+                    ])
+                }
+            }
+            
+            if !parts.isEmpty {
+                contents.append([
+                    "role": role,
+                    "parts": parts
+                ])
+            }
+        }
+        
+        // Add the new message
+        var newParts: [[String: Any]] = []
+        
+        // Format the text with markdown instructions
+        let formattedText = buildPrompt(text: newText, context: "")
+        newParts.append(["text": formattedText])
+        
+        // Add new image if present
+        if let image = newImage {
+            let imageBase64 = try imageToBase64(image)
+            newParts.append([
+                "inline_data": [
+                    "mime_type": "image/jpeg",
+                    "data": imageBase64
+                ]
+            ])
+        }
+        
+        contents.append([
+            "role": "user",
+            "parts": newParts
+        ])
+        
+        // Send request with full conversation history
+        return try await sendRequestWithHistory(contents: contents)
+    }
+    
+    private func imageToBase64(_ image: NSImage) throws -> String {
+        guard let tiffData = image.tiffRepresentation else {
+            throw GeminiError.imageProcessingFailed
+        }
+        
+        guard let bitmapRep = NSBitmapImageRep(data: tiffData) else {
+            throw GeminiError.imageProcessingFailed
+        }
+        
+        let compressionFactor: NSNumber = 0.9
+        guard let jpegData = bitmapRep.representation(
+            using: .jpeg,
+            properties: [.compressionFactor: compressionFactor]
+        ) else {
+            throw GeminiError.imageProcessingFailed
+        }
+        
+        return jpegData.base64EncodedString()
+    }
+    
     func searchWithImage(_ image: NSImage, text: String = "What's in this image?") async throws -> String {
         guard !apiKey.isEmpty else {
             throw GeminiError.missingAPIKey
@@ -117,6 +202,53 @@ class GeminiService: ObservableObject {
                     ]
                 ]
             ],
+            "generationConfig": [
+                "temperature": 0.7,
+                "maxOutputTokens": 2048,
+                "topP": 0.8,
+                "topK": 10
+            ]
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw GeminiError.invalidResponse
+        }
+        
+        if httpResponse.statusCode != 200 {
+            if let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let error = errorData["error"] as? [String: Any],
+               let message = error["message"] as? String {
+                throw GeminiError.apiError(message)
+            }
+            throw GeminiError.requestFailed(httpResponse.statusCode)
+        }
+        
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let candidates = json["candidates"] as? [[String: Any]],
+              let firstCandidate = candidates.first,
+              let content = firstCandidate["content"] as? [String: Any],
+              let parts = content["parts"] as? [[String: Any]],
+              let firstPart = parts.first,
+              let text = firstPart["text"] as? String else {
+            throw GeminiError.parseError
+        }
+        
+        return text
+    }
+    
+    private func sendRequestWithHistory(contents: [[String: Any]]) async throws -> String {
+        let url = URL(string: "\(baseURL)/models/\(selectedModel):generateContent?key=\(apiKey)")!
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let requestBody: [String: Any] = [
+            "contents": contents,
             "generationConfig": [
                 "temperature": 0.7,
                 "maxOutputTokens": 2048,
