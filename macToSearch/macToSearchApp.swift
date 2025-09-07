@@ -30,14 +30,21 @@ struct macToSearchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(appState)
-                .environmentObject(hotkeyManager)
+            // Empty view - the floating button is created in AppDelegate
+            EmptyView()
+                .frame(width: 0, height: 0)
                 .onAppear {
                     // Share instances with AppDelegate after initialization
                     appDelegate.appState = appState
                     appDelegate.hotkeyManager = hotkeyManager
                     appDelegate.setupHotkeyCallback()
+                    
+                    // Hide the window immediately
+                    DispatchQueue.main.async {
+                        if let window = NSApp.windows.first {
+                            window.orderOut(nil)
+                        }
+                    }
                 }
         }
         .modelContainer(sharedModelContainer)

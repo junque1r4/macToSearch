@@ -12,6 +12,7 @@ import CoreMedia
 
 class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOutput {
     var overlayWindow: OverlayWindow?
+    var floatingSearchWindow: FloatingSearchWindow?
     var mainWindow: NSWindow?
     var appState: AppState?
     var hotkeyManager: HotkeyManager?
@@ -21,8 +22,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     private var statusMenu: NSMenu?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Setup main window
-        setupMainWindow()
+        // Setup floating search window
+        setupFloatingSearchWindow()
         
         // Setup overlay window
         overlayWindow = OverlayWindow()
@@ -32,6 +33,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
         
         // Setup menu bar icon
         setupMenuBarIcon()
+        
+        // Hide main window if it exists
+        hideMainWindow()
     }
     
     func applicationDidBecomeActive(_ notification: Notification) {
@@ -62,10 +66,27 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
         }
     }
     
-    func setupMainWindow() {
-        // Main window is created by SwiftUI WindowGroup
+    func setupFloatingSearchWindow() {
+        // Create and show floating search window
+        floatingSearchWindow = FloatingSearchWindow(appState: appState)
+        floatingSearchWindow?.makeKeyAndOrderFront(nil)
+    }
+    
+    func hideMainWindow() {
+        // Hide the default SwiftUI window if it exists
         DispatchQueue.main.async {
-            self.mainWindow = NSApp.windows.first
+            if let window = NSApp.windows.first(where: { !($0 is FloatingSearchWindow) && !($0 is OverlayWindow) }) {
+                window.orderOut(nil)
+                self.mainWindow = window
+            }
+        }
+    }
+    
+    func setupMainWindow() {
+        // Keep for compatibility but don't show by default
+        // This is now only used when explicitly requested
+        DispatchQueue.main.async {
+            self.mainWindow = NSApp.windows.first(where: { !($0 is FloatingSearchWindow) && !($0 is OverlayWindow) })
             
             // Configure window for minimal appearance and fixed position
             if let window = self.mainWindow,
@@ -214,34 +235,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     }
     
     func showMainWindow() {
-        // Make sure window exists
-        if mainWindow == nil {
-            setupMainWindow()
-        }
-        
-        guard let window = mainWindow else { return }
-        
-        // Bring window to front with animation
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.25
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            
-            // If window is not visible, fade it in
-            if !window.isVisible {
-                window.alphaValue = 0
-                window.makeKeyAndOrderFront(nil)
-                window.animator().alphaValue = 1.0
-            } else {
-                // If already visible, just bring to front
-                window.makeKeyAndOrderFront(nil)
+        // Now shows the floating search window's expanded state
+        if let floatingWindow = floatingSearchWindow {
+            if !floatingWindow.isVisible {
+                floatingWindow.makeKeyAndOrderFront(nil)
             }
+            floatingWindow.expand()
+        } else {
+            // Fallback: create floating window if it doesn't exist
+            setupFloatingSearchWindow()
         }
-        
-        // Activate app to bring it to foreground
-        NSApp.activate(ignoringOtherApps: true)
-        
-        // Reposition window if needed
-        repositionMainWindow()
     }
     
     func setupMenuBarIcon() {
@@ -284,7 +287,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     }
     
     @objc func openChatFromMenu() {
-        showMainWindow()
+        // Show floating search window expanded
+        if let floatingWindow = floatingSearchWindow {
+            if !floatingWindow.isVisible {
+                floatingWindow.makeKeyAndOrderFront(nil)
+            }
+            floatingWindow.expand()
+        } else {
+            setupFloatingSearchWindow()
+        }
     }
     
     @objc func circleToSearchFromMenu() {
@@ -292,7 +303,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     }
     
     @objc func openPreferences() {
-        showMainWindow()
+        // For now, expand the floating window to show settings
+        // In future, could open a separate settings window
+        if let floatingWindow = floatingSearchWindow {
+            if !floatingWindow.isVisible {
+                floatingWindow.makeKeyAndOrderFront(nil)
+            }
+            floatingWindow.expand()
+        }
         // Send notification to open settings
         NotificationCenter.default.post(name: Notification.Name("OpenSettings"), object: nil)
     }
