@@ -235,8 +235,6 @@ struct FloatingSearchInterface: View {
                         onFocus: {},
                         isSearchFocused: _isSearchFocused
                     )
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
                     .background(
                         RoundedRectangle(cornerRadius: 28)
                             .fill(Color(NSColor.darkGray).opacity(0.95))
