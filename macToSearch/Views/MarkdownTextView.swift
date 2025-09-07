@@ -60,13 +60,33 @@ struct MarkdownTextView: View {
                     .foregroundColor(.primary.opacity(0.6))
                     .frame(width: 15)
                 
-                if let attributedString = try? AttributedString(markdown: text) {
-                    Text(attributedString)
+                // Parse inline code within list item
+                let parsedContent = parseInlineCode(text)
+                if parsedContent.count == 1, case .text(let plainText) = parsedContent[0] {
+                    // No inline code, use regular markdown parsing for bold/italic
+                    if let attributedString = try? AttributedString(markdown: plainText) {
+                        Text(attributedString)
+                            .font(.system(size: 15, weight: .regular))
+                            .foregroundColor(.primary.opacity(0.9))
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text(plainText)
+                            .font(.system(size: 15, weight: .regular))
+                            .foregroundColor(.primary.opacity(0.9))
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else if case .mixedContent(let parts) = parsedContent.first {
+                    // Has inline code, render mixed content
+                    let combinedString = createCombinedAttributedString(from: parts)
+                    Text(combinedString)
                         .font(.system(size: 15, weight: .regular))
                         .foregroundColor(.primary.opacity(0.9))
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
+                    // Fallback
                     Text(text)
                         .font(.system(size: 15, weight: .regular))
                         .foregroundColor(.primary.opacity(0.9))

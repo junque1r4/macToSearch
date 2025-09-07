@@ -80,8 +80,9 @@ class GeminiService: ObservableObject {
     private func buildPrompt(text: String, context: String) -> String {
         let basePrompt = """
         Please provide a helpful response using proper markdown formatting:
-        - Use **bold** for emphasis and important terms
-        - Use `backticks` for inline code, commands, or technical terms
+        - Use **bold** for emphasis and important concepts (but NOT for code)
+        - Use `backticks` for ALL code elements, commands, functions, or technical terms
+        - Never combine bold with backticks - if it's code, use only backticks
         - Use ```language for multi-line code blocks (specify the language)
         - Use * or - for bullet point lists (with a space after)
         - Separate different sections with blank lines
