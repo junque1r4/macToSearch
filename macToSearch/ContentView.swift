@@ -22,12 +22,15 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 20) {
             // Floating search bar at top
+            // FloatingSearchBar was removed - ContentView is not being used anyway
+            /*
             FloatingSearchBar(
                 searchText: $searchText,
                 attachedImage: $attachedImage,
                 onSearch: performTextSearch
             )
             .padding(.top, 20)
+            */
             
             // Chat messages or empty state
             if messages.isEmpty {
@@ -107,7 +110,7 @@ struct ContentView: View {
                 appState.lastCapturedImage = nil
             }
         }
-        .onDrop(of: [.fileURL], delegate: ImageDropDelegate(attachedImage: $attachedImage))
+        // .onDrop(of: [.fileURL], delegate: ImageDropDelegate(attachedImage: $attachedImage)) // ImageDropDelegate was removed
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .environmentObject(appState)
