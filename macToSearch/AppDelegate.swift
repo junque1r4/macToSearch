@@ -29,18 +29,92 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
         setupHotkeyCallback()
     }
     
+    func applicationDidBecomeActive(_ notification: Notification) {
+        // Reposition window when app becomes active
+        repositionMainWindow()
+    }
+    
+    func repositionMainWindow() {
+        guard let window = mainWindow,
+              let screen = NSScreen.main else { return }
+        
+        let windowWidth: CGFloat = 700
+        let windowHeight: CGFloat = 600
+        let screenFrame = screen.frame
+        
+        // Calculate position
+        let xPos = (screenFrame.width - windowWidth) / 2 + screenFrame.origin.x
+        let yPos = screenFrame.height - windowHeight - 100 + screenFrame.origin.y
+        
+        // Animate to position
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.2
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            window.animator().setFrame(
+                NSRect(x: xPos, y: yPos, width: windowWidth, height: windowHeight),
+                display: true
+            )
+        }
+    }
+    
     func setupMainWindow() {
         // Main window is created by SwiftUI WindowGroup
         DispatchQueue.main.async {
             self.mainWindow = NSApp.windows.first
             
-            // Configure window for minimal appearance
-            if let window = self.mainWindow {
+            // Configure window for minimal appearance and fixed position
+            if let window = self.mainWindow,
+               let screen = NSScreen.main {
+                
+                // Window appearance
                 window.titlebarAppearsTransparent = true
                 window.titleVisibility = .hidden
                 window.styleMask.insert(.fullSizeContentView)
                 window.isMovableByWindowBackground = true
-                window.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.98)
+                window.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.3)
+                
+                // Fixed position: center horizontally, top of screen
+                let windowWidth: CGFloat = 700
+                let windowHeight: CGFloat = 600
+                let screenFrame = screen.frame
+                
+                // Calculate position
+                let xPos = (screenFrame.width - windowWidth) / 2 + screenFrame.origin.x
+                let yPos = screenFrame.height - windowHeight - 100 + screenFrame.origin.y // 100px from top
+                
+                // Set frame with animation
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.3
+                    context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                    window.animator().setFrame(
+                        NSRect(x: xPos, y: yPos, width: windowWidth, height: windowHeight),
+                        display: true
+                    )
+                }
+                
+                // Make window float above others
+                window.level = .floating
+                
+                // Make visible on all Spaces/desktops
+                window.collectionBehavior = [
+                    .canJoinAllSpaces,     // Visible on all Spaces
+                    .transient,            // Don't show in Mission Control
+                    .ignoresCycle          // Don't include in Cmd+Tab
+                ]
+                
+                // Don't steal focus from other apps
+                window.isReleasedWhenClosed = false
+                window.hidesOnDeactivate = false
+                
+                // Smooth fade-in animation
+                window.alphaValue = 0
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.25
+                    window.animator().alphaValue = 1.0
+                }
+                
+                // Make window visible without stealing focus
+                window.orderFrontRegardless()
             }
         }
     }
