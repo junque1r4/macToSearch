@@ -152,10 +152,10 @@ class FloatingSearchWindow: NSPanel {
         }
     }
     
-    // Handle ESC key
+    // Handle ESC key - close window when pressed
     override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 && isExpanded { // ESC key
-            collapse()
+        if event.keyCode == 53 { // ESC key
+            self.close() // Close the window completely
         } else {
             super.keyDown(with: event)
         }
