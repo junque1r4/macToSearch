@@ -33,6 +33,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
         // Main window is created by SwiftUI WindowGroup
         DispatchQueue.main.async {
             self.mainWindow = NSApp.windows.first
+            
+            // Configure window for minimal appearance
+            if let window = self.mainWindow {
+                window.titlebarAppearsTransparent = true
+                window.titleVisibility = .hidden
+                window.styleMask.insert(.fullSizeContentView)
+                window.isMovableByWindowBackground = true
+                window.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.98)
+            }
         }
     }
     
