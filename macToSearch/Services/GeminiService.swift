@@ -41,12 +41,12 @@ class GeminiService: ObservableObject {
         // Build conversation history
         var contents: [[String: Any]] = []
         
-        // Add existing messages to history
+        // Add existing messages to history WITHOUT formatting
         for message in messages {
             let role = message.isUser ? "user" : "model"
             var parts: [[String: Any]] = []
             
-            // Add text part if not empty
+            // Add text part if not empty - raw content without formatting
             if !message.content.isEmpty {
                 parts.append(["text": message.content])
             }
@@ -71,12 +71,21 @@ class GeminiService: ObservableObject {
             }
         }
         
-        // Add the new message
+        // Add the new message with proper formatting
         var newParts: [[String: Any]] = []
         
-        // Format the text with markdown instructions
-        let formattedText = buildPrompt(text: newText, context: "")
-        newParts.append(["text": formattedText])
+        // For the new message, include formatting instructions only if it's the first message
+        // Otherwise, just send the raw text to maintain context
+        let messageText: String
+        if messages.isEmpty {
+            // First message - include formatting instructions
+            messageText = buildPrompt(text: newText, context: "")
+        } else {
+            // Subsequent messages - just the text to maintain conversation flow
+            messageText = newText
+        }
+        
+        newParts.append(["text": messageText])
         
         // Add new image if present
         if let image = newImage {
