@@ -34,13 +34,9 @@ struct MinimalChatBubble: View {
                         .padding(.bottom, 4)
                 }
                 
-                // Text content
+                // Text content with Markdown and code block support
                 if !message.content.isEmpty {
-                    Text(message.content)
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(.primary.opacity(0.9))
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
+                    MarkdownTextView(content: message.content)
                 }
                 
                 // Subtle timestamp
