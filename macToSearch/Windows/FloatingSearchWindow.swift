@@ -155,10 +155,19 @@ class FloatingSearchWindow: NSPanel {
     // Handle ESC key - close window when pressed
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 { // ESC key
+            // Make sure to resign first responder to release focus
+            self.makeFirstResponder(nil)
             self.close() // Close the window completely
         } else {
             super.keyDown(with: event)
         }
+    }
+    
+    // Override cancelOperation to catch ESC even when TextField has focus
+    override func cancelOperation(_ sender: Any?) {
+        print("[DEBUG] cancelOperation called - closing window")
+        self.makeFirstResponder(nil)
+        self.close()
     }
     
     func setAppState(_ appState: AppState) {
