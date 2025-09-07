@@ -42,6 +42,7 @@ struct MarkdownTextView: View {
                 .padding(.vertical, 4)
             
         case .inlineCode(let code):
+            // Single inline code element (shouldn't happen normally but handle it)
             Text(code)
                 .font(.system(size: 13, weight: .regular, design: .monospaced))
                 .foregroundColor(.pink.opacity(0.9))
@@ -51,7 +52,41 @@ struct MarkdownTextView: View {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(Color.pink.opacity(0.08))
                 )
+            
+        case .mixedContent(let parts):
+            // Create an attributed string combining all parts
+            let combinedString = createCombinedAttributedString(from: parts)
+            Text(combinedString)
+                .font(.system(size: 15, weight: .regular))
+                .foregroundColor(.primary.opacity(0.9))
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
         }
+    }
+    
+    private func createCombinedAttributedString(from parts: [ContentSection]) -> AttributedString {
+        var result = AttributedString()
+        
+        for part in parts {
+            switch part {
+            case .text(let text):
+                if let attributedString = try? AttributedString(markdown: text) {
+                    result.append(attributedString)
+                } else {
+                    result.append(AttributedString(text))
+                }
+            case .inlineCode(let code):
+                var codeString = AttributedString(code)
+                codeString.font = .system(size: 13, weight: .regular, design: .monospaced)
+                codeString.foregroundColor = .pink.opacity(0.9)
+                codeString.backgroundColor = .pink.opacity(0.08)
+                result.append(codeString)
+            default:
+                break
+            }
+        }
+        
+        return result
     }
     
     private func parseContent(_ content: String) -> [ContentSection] {
@@ -106,7 +141,7 @@ struct MarkdownTextView: View {
     }
     
     private func parseInlineCode(_ text: String) -> [ContentSection] {
-        var sections: [ContentSection] = []
+        var parts: [ContentSection] = []
         var currentText = ""
         var i = text.startIndex
         
@@ -126,7 +161,7 @@ struct MarkdownTextView: View {
                 
                 // Save accumulated text
                 if !currentText.isEmpty {
-                    sections.append(.text(currentText))
+                    parts.append(.text(currentText))
                     currentText = ""
                 }
                 
@@ -138,7 +173,7 @@ struct MarkdownTextView: View {
                 
                 if j < text.endIndex {
                     let code = String(text[text.index(after: i)..<j])
-                    sections.append(.inlineCode(code))
+                    parts.append(.inlineCode(code))
                     i = j
                 } else {
                     currentText.append(text[i])
@@ -154,16 +189,24 @@ struct MarkdownTextView: View {
         
         // Add remaining text
         if !currentText.isEmpty {
-            sections.append(.text(currentText))
+            parts.append(.text(currentText))
         }
         
-        return sections.isEmpty ? [.text(text)] : sections
+        // If we have mixed content (text + inline code), wrap it
+        if parts.count > 1 {
+            return [.mixedContent(parts)]
+        } else if parts.count == 1 {
+            return parts
+        } else {
+            return [.text(text)]
+        }
     }
 }
 
 enum ContentSection {
     case text(String)
     case codeBlock(String, String?)
+    case mixedContent([ContentSection])
     case inlineCode(String)
 }
 
