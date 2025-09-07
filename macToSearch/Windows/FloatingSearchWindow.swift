@@ -191,7 +191,7 @@ struct FloatingSearchInterface: View {
     @StateObject private var geminiService = GeminiService()
     @State private var searchText = ""
     @State private var messages: [MinimalChatMessage] = []
-    @State private var attachedImage: NSImage?
+    @State private var attachedImages: [NSImage] = []  // Changed to array for multiple images
     @State private var isLoading = false
     @FocusState private var isSearchFocused: Bool
     @State private var animateGradient = false
@@ -203,7 +203,7 @@ struct FloatingSearchInterface: View {
                 // Collapsed state - just search bar
                 SolidSearchBar(
                     searchText: $searchText,
-                    attachedImage: $attachedImage,
+                    attachedImages: $attachedImages,
                     showNeonBorder: showNeonBorder,
                     onSearch: performSearch,
                     onFocus: {
@@ -240,7 +240,7 @@ struct FloatingSearchInterface: View {
                     // Search bar - standalone at top
                     SolidSearchBar(
                         searchText: $searchText,
-                        attachedImage: $attachedImage,
+                        attachedImages: $attachedImages,
                         showNeonBorder: false,
                         onSearch: performSearch,
                         onFocus: {},
@@ -303,7 +303,7 @@ struct FloatingSearchInterface: View {
     }
     
     private func performSearch() {
-        guard !searchText.isEmpty || attachedImage != nil else { return }
+        guard !searchText.isEmpty || !attachedImages.isEmpty else { return }
         
         // Expand if not already
         if !isExpanded {
@@ -311,18 +311,21 @@ struct FloatingSearchInterface: View {
         }
         
         Task {
-            await searchWithGemini(text: searchText, image: attachedImage)
+            await searchWithGemini(text: searchText, images: attachedImages)
         }
     }
     
-    private func searchWithGemini(text: String, image: NSImage?) async {
+    private func searchWithGemini(text: String, images: [NSImage]) async {
         isLoading = true
         
         // Add the new user message to the UI immediately
         await MainActor.run {
+            let messageText = text.isEmpty && !images.isEmpty ? 
+                (images.count == 1 ? "What's in this image?" : "What's in these images?") : text
+            
             messages.append(MinimalChatMessage(
-                content: text.isEmpty && image != nil ? "What's in this image?" : text,
-                image: image,
+                content: messageText,
+                images: images,  // Pass array of images
                 isUser: true
             ))
         }
@@ -330,25 +333,27 @@ struct FloatingSearchInterface: View {
         do {
             // Convert existing messages to the format expected by GeminiService
             let messageHistory = messages.dropLast().map { message in
-                (content: message.content, image: message.image, isUser: message.isUser)
+                (content: message.content, images: message.images ?? [], isUser: message.isUser)
             }
             
             // Use the new searchWithHistory method to maintain conversation context
+            // For now, send only the first image to Gemini (we'll update this later)
             let result = try await geminiService.searchWithHistory(
-                Array(messageHistory),
-                newText: text.isEmpty && image != nil ? "What's in this image?" : text,
-                newImage: image
+                Array(messageHistory).map { (content: $0.content, image: $0.images.first, isUser: $0.isUser) },
+                newText: text.isEmpty && !images.isEmpty ? 
+                    (images.count == 1 ? "What's in this image?" : "What's in these images?") : text,
+                newImage: images.first
             )
             
             await MainActor.run {
                 messages.append(MinimalChatMessage(
                     content: result,
-                    image: nil,
+                    images: nil,
                     isUser: false
                 ))
                 
                 searchText = ""
-                attachedImage = nil
+                attachedImages = []
                 isLoading = false
             }
         } catch {
@@ -367,64 +372,75 @@ struct FloatingSearchInterface: View {
 // MARK: - Solid Search Bar
 struct SolidSearchBar: View {
     @Binding var searchText: String
-    @Binding var attachedImage: NSImage?
+    @Binding var attachedImages: [NSImage]
     let showNeonBorder: Bool
     let onSearch: () -> Void
     let onFocus: () -> Void
     @FocusState var isSearchFocused: Bool
     
     var body: some View {
-        HStack(spacing: 12) {
-            // Search icon
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.primary.opacity(0.5))
+        VStack(spacing: 0) {
+            // Image preview bar (appears above the search bar)
+            // TODO: Fix ImagePreviewBar compilation issue
+            /*
+            if !attachedImages.isEmpty {
+                ImagePreviewBar(images: $attachedImages)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+            }
+            */
             
-            // Text field
-            TextField("macToSearch", text: $searchText)
-                .textFieldStyle(.plain)
-                .font(.system(size: 16))
-                .focused($isSearchFocused)
-                .onSubmit(onSearch)
-                .onChange(of: isSearchFocused) { focused in
-                    if focused {
-                        onFocus()
+            HStack(spacing: 12) {
+                // Search icon
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary.opacity(0.5))
+                
+                // Custom TextField with paste support
+                PasteableTextField(
+                    text: $searchText,
+                    images: $attachedImages,
+                    isFocused: _isSearchFocused.projectedValue,
+                    onSubmit: onSearch,
+                    onFocus: onFocus
+                )
+                
+                // Action buttons
+                HStack(spacing: 8) {
+                    // Clear button
+                    if !searchText.isEmpty || !attachedImages.isEmpty {
+                        Button(action: {
+                            searchText = ""
+                            attachedImages = []
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary.opacity(0.4))
+                        }
+                        .buttonStyle(.plain)
                     }
-                }
-            
-            // Action buttons
-            HStack(spacing: 8) {
-                // Clear button
-                if !searchText.isEmpty {
-                    Button(action: {
-                        searchText = ""
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
+                    
+                    // Camera button
+                    Button(action: captureScreen) {
+                        Image(systemName: "camera.fill")
                             .font(.system(size: 14))
-                            .foregroundColor(.secondary.opacity(0.4))
+                            .foregroundColor(.secondary.opacity(0.5))
+                    }
+                    .buttonStyle(.plain)
+                    
+                    // Mic button
+                    Button(action: {}) {
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary.opacity(0.5))
                     }
                     .buttonStyle(.plain)
                 }
-                
-                // Camera button
-                Button(action: captureScreen) {
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary.opacity(0.5))
-                }
-                .buttonStyle(.plain)
-                
-                // Mic button
-                Button(action: {}) {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary.opacity(0.5))
-                }
-                .buttonStyle(.plain)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
     }
     
     private func captureScreen() {

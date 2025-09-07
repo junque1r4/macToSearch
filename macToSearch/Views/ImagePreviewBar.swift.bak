@@ -1,0 +1,84 @@
+//
+//  ImagePreviewBar.swift
+//  macToSearch
+//
+//  Created by Assistant on 07/09/2025.
+//
+
+import SwiftUI
+
+struct ImagePreviewBar: View {
+    @Binding var images: [NSImage]
+    
+    var body: some View {
+        if !images.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Array(images.enumerated()), id: \.offset) { index, image in
+                        ImageThumbnail(image: image) {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                images.remove(at: index)
+                            }
+                        }
+                    }
+                }
+                .padding(12)
+            }
+            .frame(height: 100)
+            .background(Color(red: 0.5, green: 0.5, blue: 0.5, opacity: 0.1))
+            .cornerRadius(16)
+        }
+    }
+}
+
+struct ImageThumbnail: View {
+    let image: NSImage
+    let onDelete: () -> Void
+    @State private var isHovered = false
+    
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            // Image thumbnail
+            Image(nsImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 80, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .scaleEffect(isHovered ? 1.05 : 1.0)
+            
+            // Delete button
+            Button(action: onDelete) {
+                ZStack {
+                    Circle()
+                        .fill(Color.black)
+                        .frame(width: 22, height: 22)
+                    
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
+            .buttonStyle(.plain)
+            .offset(x: 5, y: -5)
+            .opacity(isHovered ? 1 : 0.8)
+            .scaleEffect(isHovered ? 1.1 : 1.0)
+        }
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .animation(.easeInOut(duration: 0.15), value: isHovered)
+    }
+}
+
+// Preview
+#Preview {
+    VStack {
+        ImagePreviewBar(images: .constant([
+            NSImage(systemSymbolName: "photo", accessibilityDescription: nil)!,
+            NSImage(systemSymbolName: "photo.fill", accessibilityDescription: nil)!,
+            NSImage(systemSymbolName: "photo.circle", accessibilityDescription: nil)!
+        ]))
+        .padding()
+    }
+    .frame(width: 600, height: 200)
+}

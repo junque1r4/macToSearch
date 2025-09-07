@@ -10,9 +10,26 @@ import SwiftUI
 struct MinimalChatMessage: Identifiable {
     let id = UUID()
     let content: String
-    let image: NSImage?
+    let image: NSImage?  // Keep for backward compatibility
+    let images: [NSImage]?  // New field for multiple images
     let isUser: Bool
     let timestamp: Date = Date()
+    
+    // Convenience initializer for single image
+    init(content: String, image: NSImage?, isUser: Bool) {
+        self.content = content
+        self.image = image
+        self.images = image != nil ? [image!] : nil
+        self.isUser = isUser
+    }
+    
+    // Initializer for multiple images
+    init(content: String, images: [NSImage]?, isUser: Bool) {
+        self.content = content
+        self.image = images?.first
+        self.images = images
+        self.isUser = isUser
+    }
 }
 
 struct MinimalChatBubble: View {
@@ -24,14 +41,36 @@ struct MinimalChatBubble: View {
         VStack(alignment: .leading, spacing: 12) {
             // Main content bubble
             VStack(alignment: .leading, spacing: 10) {
-                // Image if present
-                if let image = message.image {
-                    Image(nsImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: 400, maxHeight: 250)
-                        .cornerRadius(16)
+                // Images if present
+                if let images = message.images, !images.isEmpty {
+                    if images.count == 1 {
+                        // Single image - display larger
+                        Image(nsImage: images[0])
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: 400, maxHeight: 250)
+                            .cornerRadius(16)
+                            .padding(.bottom, 4)
+                    } else {
+                        // Multiple images - display in a grid
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(Array(images.enumerated()), id: \.offset) { _, image in
+                                    Image(nsImage: image)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 120, height: 120)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
+                                        )
+                                }
+                            }
+                        }
+                        .frame(maxWidth: 400)
                         .padding(.bottom, 4)
+                    }
                 }
                 
                 // Text content with Markdown and code block support
