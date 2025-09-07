@@ -17,6 +17,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     var hotkeyManager: HotkeyManager?
     private var capturedImage: NSImage?
     private var captureStream: SCStream?
+    private var statusItem: NSStatusItem?
+    private var statusMenu: NSMenu?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Setup main window
@@ -25,8 +27,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
         // Setup overlay window
         overlayWindow = OverlayWindow()
         
-        // Setup hotkey callback
+        // Setup hotkey callbacks
         setupHotkeyCallback()
+        
+        // Setup menu bar icon
+        setupMenuBarIcon()
     }
     
     func applicationDidBecomeActive(_ notification: Notification) {
@@ -123,6 +128,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
         hotkeyManager?.captureCallback = { [weak self] in
             self?.showDrawingOverlay()
         }
+        
+        hotkeyManager?.openChatCallback = { [weak self] in
+            self?.showMainWindow()
+        }
     }
     
     func showDrawingOverlay() {
@@ -202,6 +211,90 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
         // Update app state
         appState?.showSearchOverlay = false
         print("=== hideDrawingOverlay completed ===")
+    }
+    
+    func showMainWindow() {
+        // Make sure window exists
+        if mainWindow == nil {
+            setupMainWindow()
+        }
+        
+        guard let window = mainWindow else { return }
+        
+        // Bring window to front with animation
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.25
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            
+            // If window is not visible, fade it in
+            if !window.isVisible {
+                window.alphaValue = 0
+                window.makeKeyAndOrderFront(nil)
+                window.animator().alphaValue = 1.0
+            } else {
+                // If already visible, just bring to front
+                window.makeKeyAndOrderFront(nil)
+            }
+        }
+        
+        // Activate app to bring it to foreground
+        NSApp.activate(ignoringOtherApps: true)
+        
+        // Reposition window if needed
+        repositionMainWindow()
+    }
+    
+    func setupMenuBarIcon() {
+        // Create status item with variable length
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        
+        // Set icon - using magnifying glass similar to Spotlight
+        if let button = statusItem?.button {
+            button.image = NSImage(systemSymbolName: "magnifyingglass.circle.fill", accessibilityDescription: "macToSearch")
+            button.image?.size = NSSize(width: 18, height: 18)
+            button.image?.isTemplate = true // Makes it adapt to dark/light mode
+            button.toolTip = "macToSearch - AI-powered search"
+        }
+        
+        // Create menu
+        statusMenu = NSMenu()
+        
+        // Add menu items
+        statusMenu?.addItem(NSMenuItem(title: "Open Chat", action: #selector(openChatFromMenu), keyEquivalent: "o"))
+        statusMenu?.items.last?.keyEquivalentModifierMask = [.command, .shift]
+        statusMenu?.items.last?.target = self
+        
+        statusMenu?.addItem(NSMenuItem(title: "Circle to Search", action: #selector(circleToSearchFromMenu), keyEquivalent: "space"))
+        statusMenu?.items.last?.keyEquivalentModifierMask = [.command, .shift]
+        statusMenu?.items.last?.target = self
+        
+        statusMenu?.addItem(NSMenuItem.separator())
+        
+        statusMenu?.addItem(NSMenuItem(title: "Preferences...", action: #selector(openPreferences), keyEquivalent: ","))
+        statusMenu?.items.last?.keyEquivalentModifierMask = [.command]
+        statusMenu?.items.last?.target = self
+        
+        statusMenu?.addItem(NSMenuItem.separator())
+        
+        statusMenu?.addItem(NSMenuItem(title: "Quit macToSearch", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        statusMenu?.items.last?.keyEquivalentModifierMask = [.command]
+        
+        // Assign menu to status item
+        statusItem?.menu = statusMenu
+    }
+    
+    @objc func openChatFromMenu() {
+        showMainWindow()
+    }
+    
+    @objc func circleToSearchFromMenu() {
+        showDrawingOverlay()
+    }
+    
+    @objc func openPreferences() {
+        showMainWindow()
+        // Send notification to open settings
+        NotificationCenter.default.post(name: Notification.Name("OpenSettings"), object: nil)
     }
     
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

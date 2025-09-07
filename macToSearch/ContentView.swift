@@ -113,6 +113,9 @@ struct ContentView: View {
                 .environmentObject(appState)
                 .environmentObject(hotkeyManager)
         }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("OpenSettings"))) { _ in
+            showSettings = true
+        }
     }
     
     private func setupHotkey() {
@@ -120,6 +123,13 @@ struct ContentView: View {
             // Use AppDelegate to show overlay with screen capture
             if let appDelegate = NSApp.delegate as? AppDelegate {
                 appDelegate.showDrawingOverlay()
+            }
+        }
+        
+        hotkeyManager.openChatCallback = {
+            // Use AppDelegate to show main window
+            if let appDelegate = NSApp.delegate as? AppDelegate {
+                appDelegate.showMainWindow()
             }
         }
     }
