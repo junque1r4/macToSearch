@@ -53,6 +53,62 @@ struct MarkdownTextView: View {
                         .fill(Color.pink.opacity(0.08))
                 )
             
+        case .listItem(let text, let isOrdered):
+            HStack(alignment: .top, spacing: 8) {
+                Text(isOrdered ? "•" : "•")
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary.opacity(0.6))
+                    .frame(width: 15)
+                
+                if let attributedString = try? AttributedString(markdown: text) {
+                    Text(attributedString)
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.primary.opacity(0.9))
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text(text)
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.primary.opacity(0.9))
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                
+                Spacer(minLength: 0)
+            }
+            .padding(.leading, 8)
+            
+        case .paragraph(let parts):
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
+                    switch part {
+                    case .text(let text):
+                        if let attributedString = try? AttributedString(markdown: text) {
+                            Text(attributedString)
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundColor(.primary.opacity(0.9))
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            Text(text)
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundColor(.primary.opacity(0.9))
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    case .mixedContent(let subparts):
+                        let combinedString = createCombinedAttributedString(from: subparts)
+                        Text(combinedString)
+                            .font(.system(size: 15, weight: .regular))
+                            .foregroundColor(.primary.opacity(0.9))
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    default:
+                        EmptyView()
+                    }
+                }
+            }
+            
         case .mixedContent(let parts):
             // Create an attributed string combining all parts
             let combinedString = createCombinedAttributedString(from: parts)
@@ -91,19 +147,21 @@ struct MarkdownTextView: View {
     
     private func parseContent(_ content: String) -> [ContentSection] {
         var sections: [ContentSection] = []
-        let lines = content.split(separator: "\n", omittingEmptySubsequences: false)
-        var currentText = ""
+        let lines = content.split(separator: "\n", omittingEmptySubsequences: false).map { String($0) }
+        var currentParagraph: [String] = []
         var i = 0
         
         while i < lines.count {
-            let line = String(lines[i])
+            let line = lines[i]
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
             
             // Check for code block start
             if line.starts(with: "```") {
-                // Save any accumulated text
-                if !currentText.isEmpty {
-                    sections.append(contentsOf: parseInlineCode(currentText))
-                    currentText = ""
+                // Save any accumulated paragraph
+                if !currentParagraph.isEmpty {
+                    let paragraphText = currentParagraph.joined(separator: "\n")
+                    sections.append(contentsOf: parseParagraph(paragraphText))
+                    currentParagraph = []
                 }
                 
                 // Extract language identifier
@@ -113,7 +171,7 @@ struct MarkdownTextView: View {
                 
                 // Collect code lines until closing ```
                 while i < lines.count && !lines[i].starts(with: "```") {
-                    codeLines.append(String(lines[i]))
+                    codeLines.append(lines[i])
                     i += 1
                 }
                 
@@ -121,23 +179,49 @@ struct MarkdownTextView: View {
                     let code = codeLines.joined(separator: "\n")
                     sections.append(.codeBlock(code, language.isEmpty ? nil : language))
                 }
-            } else {
-                // Accumulate regular text
-                if !currentText.isEmpty {
-                    currentText += "\n"
+            }
+            // Check for list items (starts with * or - followed by space)
+            else if (trimmedLine.starts(with: "* ") || trimmedLine.starts(with: "- ")) && trimmedLine.count > 2 {
+                // Save any accumulated paragraph
+                if !currentParagraph.isEmpty {
+                    let paragraphText = currentParagraph.joined(separator: "\n")
+                    sections.append(contentsOf: parseParagraph(paragraphText))
+                    currentParagraph = []
                 }
-                currentText += line
+                
+                // Extract list item text (remove the bullet and space)
+                let itemText = String(trimmedLine.dropFirst(2))
+                sections.append(.listItem(itemText, isOrdered: false))
+            }
+            // Check for empty line (paragraph separator)
+            else if trimmedLine.isEmpty {
+                // Save current paragraph if exists
+                if !currentParagraph.isEmpty {
+                    let paragraphText = currentParagraph.joined(separator: "\n")
+                    sections.append(contentsOf: parseParagraph(paragraphText))
+                    currentParagraph = []
+                }
+            }
+            // Regular text line
+            else {
+                currentParagraph.append(line)
             }
             
             i += 1
         }
         
-        // Add any remaining text
-        if !currentText.isEmpty {
-            sections.append(contentsOf: parseInlineCode(currentText))
+        // Add any remaining paragraph
+        if !currentParagraph.isEmpty {
+            let paragraphText = currentParagraph.joined(separator: "\n")
+            sections.append(contentsOf: parseParagraph(paragraphText))
         }
         
         return sections
+    }
+    
+    private func parseParagraph(_ text: String) -> [ContentSection] {
+        // Parse inline elements within a paragraph
+        return parseInlineCode(text)
     }
     
     private func parseInlineCode(_ text: String) -> [ContentSection] {
@@ -208,6 +292,8 @@ enum ContentSection {
     case codeBlock(String, String?)
     case mixedContent([ContentSection])
     case inlineCode(String)
+    case listItem(String, isOrdered: Bool)
+    case paragraph([ContentSection])
 }
 
 // Simple code block view

@@ -78,16 +78,25 @@ class GeminiService: ObservableObject {
     }
     
     private func buildPrompt(text: String, context: String) -> String {
+        let basePrompt = """
+        Please provide a helpful response using proper markdown formatting:
+        - Use **bold** for emphasis and important terms
+        - Use `backticks` for inline code, commands, or technical terms
+        - Use ```language for multi-line code blocks (specify the language)
+        - Use * or - for bullet point lists (with a space after)
+        - Separate different sections with blank lines
+        - Keep explanations clear and well-structured
+        
+        """
+        
         if !context.isEmpty {
-            return """
+            return basePrompt + """
             Context: \(context)
             
             Question: \(text)
-            
-            Please provide a helpful and concise response.
             """
         } else {
-            return text
+            return basePrompt + "Question: \(text)"
         }
     }
     
