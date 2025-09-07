@@ -185,6 +185,8 @@ struct FloatingSearchInterface: View {
     @State private var attachedImage: NSImage?
     @State private var isLoading = false
     @FocusState private var isSearchFocused: Bool
+    @State private var animateGradient = false
+    @State private var gradientRotation: Double = 0
     
     var body: some View {
         VStack(spacing: 0) {
@@ -208,20 +210,20 @@ struct FloatingSearchInterface: View {
                         .fill(Color(NSColor.darkGray).opacity(0.95))
                 )
                 .overlay(
-                    // Neon border if enabled
-                    showNeonBorder ?
+                    // Animated gradient border
                     RoundedRectangle(cornerRadius: 28)
                         .stroke(
-                            LinearGradient(
-                                colors: [.blue, .purple, .pink],
-                                startPoint: .leading,
-                                endPoint: .trailing
+                            AngularGradient(
+                                colors: showNeonBorder ? 
+                                    [.blue, .purple, .pink, .orange, .yellow, .green, .blue] :
+                                    [.blue.opacity(0.5), .purple.opacity(0.5), .pink.opacity(0.5), .blue.opacity(0.5)],
+                                center: .center,
+                                angle: .degrees(gradientRotation)
                             ),
-                            lineWidth: 2
+                            lineWidth: showNeonBorder ? 2 : 1.5
                         )
                         .shadow(color: .blue.opacity(0.6), radius: 10)
-                        .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: showNeonBorder)
-                    : nil
+                        .shadow(color: .purple.opacity(0.4), radius: 15)
                 )
             } else {
                 // Expanded state - search bar + separate chat
@@ -242,13 +244,15 @@ struct FloatingSearchInterface: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 28)
                             .stroke(
-                                LinearGradient(
-                                    colors: [.blue.opacity(0.3), .purple.opacity(0.3)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
+                                AngularGradient(
+                                    colors: [.blue, .purple, .pink, .orange, .yellow, .green, .blue],
+                                    center: .center,
+                                    angle: .degrees(gradientRotation)
                                 ),
-                                lineWidth: 1
+                                lineWidth: 2
                             )
+                            .shadow(color: .blue.opacity(0.6), radius: 10)
+                            .shadow(color: .purple.opacity(0.4), radius: 15)
                     )
                     
                     // Chat area - separate rounded rectangle
@@ -279,6 +283,12 @@ struct FloatingSearchInterface: View {
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                 }
                 .padding(.top, 0) // Ensure no extra padding at top
+            }
+        }
+        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isExpanded)
+        .onAppear {
+            withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
+                gradientRotation = 360
             }
         }
     }
