@@ -381,15 +381,12 @@ struct SolidSearchBar: View {
     var body: some View {
         VStack(spacing: 0) {
             // Image preview bar (appears above the search bar)
-            // TODO: Fix ImagePreviewBar compilation issue
-            /*
             if !attachedImages.isEmpty {
                 ImagePreviewBar(images: $attachedImages)
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
                     .padding(.bottom, 4)
             }
-            */
             
             HStack(spacing: 12) {
                 // Search icon
