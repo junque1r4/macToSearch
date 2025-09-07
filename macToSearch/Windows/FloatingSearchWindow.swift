@@ -15,7 +15,7 @@ class FloatingSearchWindow: NSPanel {
     private var isExpanded = false
     private var showNeonBorder = true
     private let collapsedHeight: CGFloat = 56
-    private let expandedHeight: CGFloat = 500
+    private let expandedHeight: CGFloat = 520 // Slightly more height for separation
     private let searchBarWidth: CGFloat = 600
     
     init(appState: AppState? = nil) {
@@ -224,9 +224,9 @@ struct FloatingSearchInterface: View {
                     : nil
                 )
             } else {
-                // Expanded state - search bar + chat
-                VStack(spacing: 0) {
-                    // Search bar at top - keep the same beautiful design
+                // Expanded state - search bar + separate chat
+                VStack(spacing: 16) { // Add space between search bar and chat
+                    // Search bar - standalone at top
                     SolidSearchBar(
                         searchText: $searchText,
                         attachedImage: $attachedImage,
@@ -235,6 +235,8 @@ struct FloatingSearchInterface: View {
                         onFocus: {},
                         isSearchFocused: _isSearchFocused
                     )
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
                     .background(
                         RoundedRectangle(cornerRadius: 28)
                             .fill(Color(NSColor.darkGray).opacity(0.95))
@@ -250,39 +252,35 @@ struct FloatingSearchInterface: View {
                                 lineWidth: 1
                             )
                     )
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
                     
-                    Divider()
-                        .opacity(0.2)
-                    
-                    // Chat area
-                    if messages.isEmpty {
-                        EmptyStateView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        MinimalChatContainer(messages: $messages)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                    
-                    // Loading indicator
-                    if isLoading {
-                        LoadingIndicator()
-                            .padding(.bottom, 12)
-                    }
-                }
-                .background(
-                    // Glassmorphism effect with blur and transparency
-                    ZStack {
-                        // Visual effect blur layer
-                        GlassmorphismBackground()
+                    // Chat area - separate rounded rectangle
+                    VStack(spacing: 0) {
+                        if messages.isEmpty {
+                            EmptyStateView()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else {
+                            MinimalChatContainer(messages: $messages)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
                         
-                        // Semi-transparent overlay
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color(NSColor.darkGray).opacity(0.3))
+                        // Loading indicator
+                        if isLoading {
+                            LoadingIndicator()
+                                .padding(.bottom, 12)
+                        }
                     }
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(
+                        // Glassmorphism effect for chat area only
+                        ZStack {
+                            GlassmorphismBackground()
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color(NSColor.darkGray).opacity(0.3))
+                        }
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                }
+                .padding(.top, 0) // Ensure no extra padding at top
             }
         }
     }
