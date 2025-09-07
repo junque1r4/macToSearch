@@ -130,14 +130,35 @@ struct MarkdownTextView: View {
             }
             
         case .mixedContent(let parts):
-            // Create an attributed string combining all parts
-            let combinedString = createCombinedAttributedString(from: parts)
-            Text(combinedString)
-                .font(.system(size: 15, weight: .regular))
-                .foregroundColor(.primary.opacity(0.9))
+            // Try using Text concatenation instead of AttributedString
+            renderMixedContent(parts)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+    
+    @ViewBuilder
+    private func renderMixedContent(_ parts: [ContentSection]) -> some View {
+        // Build Text using concatenation
+        let combinedText = parts.reduce(Text("")) { result, part in
+            switch part {
+            case .text(let text):
+                return result + Text(text)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(.primary.opacity(0.9))
+            case .inlineCode(let code):
+                // Create an attributed string for the inline code with background
+                var codeAttr = AttributedString(code)
+                codeAttr.font = .system(size: 13, weight: .regular, design: .monospaced)
+                codeAttr.foregroundColor = .pink.opacity(0.9)
+                codeAttr.backgroundColor = .pink.opacity(0.08)
+                return result + Text(codeAttr)
+            default:
+                return result
+            }
+        }
+        
+        combinedText
     }
     
     private func createCombinedAttributedString(from parts: [ContentSection]) -> AttributedString {
@@ -146,11 +167,11 @@ struct MarkdownTextView: View {
         for part in parts {
             switch part {
             case .text(let text):
-                if let attributedString = try? AttributedString(markdown: text) {
-                    result.append(attributedString)
-                } else {
-                    result.append(AttributedString(text))
-                }
+                // Apply font and color directly to the text part
+                var textString = AttributedString(text)
+                textString.font = .system(size: 15, weight: .regular)
+                textString.foregroundColor = .primary.opacity(0.9)
+                result.append(textString)
             case .inlineCode(let code):
                 var codeString = AttributedString(code)
                 codeString.font = .system(size: 13, weight: .regular, design: .monospaced)
@@ -263,6 +284,17 @@ struct MarkdownTextView: View {
                     }
                 }
                 
+                // Check if we need to add space before the code
+                // Check if currentText ends with alphanumeric (text accumulated so far)
+                if !currentText.isEmpty {
+                    if let lastChar = currentText.last, (lastChar.isLetter || lastChar.isNumber) {
+                        // Add space to current text if it doesn't already end with one
+                        if !currentText.hasSuffix(" ") {
+                            currentText.append(" ") // Regular space
+                        }
+                    }
+                }
+                
                 // Save accumulated text
                 if !currentText.isEmpty {
                     parts.append(.text(currentText))
@@ -278,7 +310,20 @@ struct MarkdownTextView: View {
                 if j < text.endIndex {
                     let code = String(text[text.index(after: i)..<j])
                     parts.append(.inlineCode(code))
-                    i = j
+                    
+                    // Move past the closing backtick
+                    i = text.index(after: j)
+                    
+                    // Check if character after closing ` needs spacing
+                    if i < text.endIndex {
+                        let nextChar = text[i]
+                        if nextChar.isLetter || nextChar.isNumber {
+                            // Start next text with regular space
+                            currentText = " "
+                        }
+                        // Don't skip spaces - let them be added naturally
+                    }
+                    continue
                 } else {
                     currentText.append(text[i])
                 }
@@ -307,7 +352,7 @@ struct MarkdownTextView: View {
     }
 }
 
-enum ContentSection {
+enum ContentSection: Equatable {
     case text(String)
     case codeBlock(String, String?)
     case mixedContent([ContentSection])
@@ -382,6 +427,31 @@ struct CodeBlockView: View {
                 copied = false
             }
         }
+    }
+}
+
+// Extension for testing (internal visibility)
+extension MarkdownTextView {
+    static func parseInlineCodeForTesting(_ text: String) -> [ContentSection] {
+        let view = MarkdownTextView(content: "")
+        return view.parseInlineCode(text)
+    }
+    
+    static func renderSectionsAsText(_ sections: [ContentSection]) -> String {
+        var result = ""
+        for section in sections {
+            switch section {
+            case .text(let text):
+                result += text
+            case .inlineCode(let code):
+                result += "`\(code)`"
+            case .mixedContent(let parts):
+                result += renderSectionsAsText(parts)
+            default:
+                break
+            }
+        }
+        return result
     }
 }
 

@@ -83,6 +83,7 @@ class GeminiService: ObservableObject {
         - Use **bold** for emphasis and important concepts (but NOT for code)
         - Use `backticks` for ALL code elements, commands, functions, or technical terms
         - Never combine bold with backticks - if it's code, use only backticks
+        - IMPORTANT: Always add spaces before and after inline code (e.g., "the `fn` keyword", not "the`fn`keyword")
         - Use ```language for multi-line code blocks (specify the language)
         - Use * or - for bullet point lists (with a space after)
         - Separate different sections with blank lines
