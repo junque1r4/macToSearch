@@ -235,15 +235,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     }
     
     func showMainWindow() {
-        // Now shows the floating search window's expanded state
+        // Shows the floating search window (always expanded)
         if let floatingWindow = floatingSearchWindow {
             if !floatingWindow.isVisible {
                 floatingWindow.makeKeyAndOrderFront(nil)
             }
-            floatingWindow.expand()
+            // Focus search field after showing window
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                floatingWindow.focusSearchField()
+            }
         } else {
             // Fallback: create floating window if it doesn't exist
             setupFloatingSearchWindow()
+            // Focus search field after creating window
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                self.floatingSearchWindow?.focusSearchField()
+            }
         }
     }
     
@@ -287,14 +294,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     }
     
     @objc func openChatFromMenu() {
-        // Show floating search window expanded
+        // Show floating search window (always expanded)
         if let floatingWindow = floatingSearchWindow {
             if !floatingWindow.isVisible {
                 floatingWindow.makeKeyAndOrderFront(nil)
             }
-            floatingWindow.expand()
+            // Focus search field after showing window
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                floatingWindow.focusSearchField()
+            }
         } else {
             setupFloatingSearchWindow()
+            // Focus search field after creating window
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                self.floatingSearchWindow?.focusSearchField()
+            }
         }
     }
     
@@ -303,13 +317,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     }
     
     @objc func openPreferences() {
-        // For now, expand the floating window to show settings
+        // Show the floating window for settings
         // In future, could open a separate settings window
         if let floatingWindow = floatingSearchWindow {
             if !floatingWindow.isVisible {
                 floatingWindow.makeKeyAndOrderFront(nil)
             }
-            floatingWindow.expand()
+            // Window is always expanded - no need to call expand()
         }
         // Send notification to open settings
         NotificationCenter.default.post(name: Notification.Name("OpenSettings"), object: nil)

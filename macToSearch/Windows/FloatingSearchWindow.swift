@@ -12,18 +12,18 @@ import AppKit
 class FloatingSearchWindow: NSPanel {
     private var hostingView: NSHostingView<AnyView>?
     private var appState: AppState?
-    private var isExpanded = false
-    private var showNeonBorder = true
-    private let collapsedHeight: CGFloat = 56
-    private let expandedHeight: CGFloat = 520 // Slightly more height for separation
+    private let isExpanded = true  // Always expanded
+    private var showNeonBorder = false  // No need for initial border animation
+    private let windowHeight: CGFloat = 520  // Fixed height
     private let searchBarWidth: CGFloat = 600
+    private var searchFieldFocusHandler: (() -> Void)?
     
     init(appState: AppState? = nil) {
         self.appState = appState
         
-        // Initialize with collapsed size
+        // Initialize with expanded size
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: searchBarWidth, height: collapsedHeight),
+            contentRect: NSRect(x: 0, y: 0, width: searchBarWidth, height: windowHeight),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -54,7 +54,7 @@ class FloatingSearchWindow: NSPanel {
         
         // Round corners
         contentView?.wantsLayer = true
-        contentView?.layer?.cornerRadius = 28
+        contentView?.layer?.cornerRadius = 20  // Standard corner radius for expanded state
         contentView?.layer?.masksToBounds = true
     }
     
@@ -65,17 +65,13 @@ class FloatingSearchWindow: NSPanel {
     private func updateContent() {
         hostingView?.removeFromSuperview()
         
-        let content = FloatingSearchInterface(
-            isExpanded: isExpanded,
-            showNeonBorder: showNeonBorder,
-            onExpand: { [weak self] in
-                self?.expand()
-            },
-            onCollapse: { [weak self] in
-                self?.collapse()
-            },
+        var content = FloatingSearchInterface(
             appState: appState ?? AppState()
         )
+        // Set up the focus handler
+        content.onWindowVisible = { [weak self] in
+            self?.focusSearchField()
+        }
         
         hostingView = NSHostingView(rootView: AnyView(content))
         hostingView?.frame = contentView?.bounds ?? .zero
@@ -91,66 +87,12 @@ class FloatingSearchWindow: NSPanel {
         
         let screenFrame = screen.visibleFrame
         let xPos = (screenFrame.width - searchBarWidth) / 2 + screenFrame.origin.x
-        let yPos = screenFrame.maxY - collapsedHeight - 100 // 100px from top
+        let yPos = screenFrame.maxY - windowHeight - 100 // 100px from top
         
         setFrameOrigin(NSPoint(x: xPos, y: yPos))
     }
     
-    func expand() {
-        guard !isExpanded else { return }
-        isExpanded = true
-        
-        // Hide neon border after first expansion
-        if showNeonBorder {
-            showNeonBorder = false
-            updateContent()
-        }
-        
-        guard let screen = NSScreen.main else { return }
-        let screenFrame = screen.visibleFrame
-        let currentFrame = frame
-        
-        // Keep X position and top Y position the same, expand downward
-        let xPos = currentFrame.origin.x
-        let topY = currentFrame.maxY
-        let newY = topY - expandedHeight
-        
-        // Update corner radius for expanded state
-        contentView?.layer?.cornerRadius = 20
-        
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.35
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            self.animator().setFrame(
-                NSRect(x: xPos, y: newY, width: searchBarWidth, height: expandedHeight),
-                display: true
-            )
-        }
-    }
-    
-    func collapse() {
-        guard isExpanded else { return }
-        isExpanded = false
-        
-        let currentFrame = frame
-        
-        // Keep X position, collapse upward to original position
-        let xPos = currentFrame.origin.x
-        let topY = currentFrame.maxY
-        let newY = topY - collapsedHeight
-        
-        // Update corner radius for collapsed state
-        contentView?.layer?.cornerRadius = 28
-        
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.3
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            self.animator().setFrame(
-                NSRect(x: xPos, y: newY, width: searchBarWidth, height: collapsedHeight),
-                display: true
-            )
-        }
-    }
+    // Expansion methods removed - window is always expanded
     
     // Handle ESC key - close window when pressed
     override func keyDown(with event: NSEvent) {
@@ -178,15 +120,22 @@ class FloatingSearchWindow: NSPanel {
     override var canBecomeKey: Bool {
         return true
     }
+    
+    // Method to focus the search field
+    func focusSearchField() {
+        // Make the window key and order front first
+        if !self.isKeyWindow {
+            self.makeKeyAndOrderFront(nil)
+        }
+        // Call the focus handler if set
+        searchFieldFocusHandler?()
+    }
 }
 
 // MARK: - Floating Search Interface
 struct FloatingSearchInterface: View {
-    let isExpanded: Bool
-    let showNeonBorder: Bool
-    let onExpand: () -> Void
-    let onCollapse: () -> Void
     let appState: AppState
+    var onWindowVisible: (() -> Void)? = nil
     
     @StateObject private var geminiService = GeminiService()
     @State private var searchText = ""
@@ -199,56 +148,19 @@ struct FloatingSearchInterface: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            if !isExpanded {
-                // Collapsed state - just search bar
-                SolidSearchBar(
-                    searchText: $searchText,
-                    attachedImages: $attachedImages,
-                    showNeonBorder: showNeonBorder,
-                    onSearch: performSearch,
-                    onFocus: {
-                        if !isExpanded {
-                            onExpand()
-                        }
-                    },
-                    isSearchFocused: _isSearchFocused
-                )
-                .background(
-                    // Solid dark background
-                    RoundedRectangle(cornerRadius: 28)
-                        .fill(Color(NSColor.darkGray).opacity(0.95))
-                )
-                .overlay(
-                    // Animated gradient border
-                    RoundedRectangle(cornerRadius: 28)
-                        .stroke(
-                            AngularGradient(
-                                colors: showNeonBorder ? 
-                                    [.blue, .purple, .pink, .orange, .yellow, .green, .blue] :
-                                    [.blue.opacity(0.5), .purple.opacity(0.5), .pink.opacity(0.5), .blue.opacity(0.5)],
-                                center: .center,
-                                angle: .degrees(gradientRotation)
-                            ),
-                            lineWidth: showNeonBorder ? 2 : 1.5
-                        )
-                        .shadow(color: .blue.opacity(0.6), radius: 10)
-                        .shadow(color: .purple.opacity(0.4), radius: 15)
-                )
-            } else {
-                // Expanded state - search bar + separate chat
-                VStack(spacing: 16) { // Add space between search bar and chat
+            // Always expanded - search bar + separate chat
+            VStack(spacing: 16) { // Add space between search bar and chat
                     // Search bar - standalone at top
                     SolidSearchBar(
                         searchText: $searchText,
                         attachedImages: $attachedImages,
-                        showNeonBorder: false,
                         onSearch: performSearch,
                         onFocus: {},
                         isSearchFocused: _isSearchFocused
                     )
                     .background(
                         RoundedRectangle(cornerRadius: 28)
-                            .fill(Color(NSColor.darkGray).opacity(0.95))
+                            .fill(Color(NSColor.windowBackgroundColor).opacity(0.95))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 28)
@@ -286,29 +198,28 @@ struct FloatingSearchInterface: View {
                         ZStack {
                             GlassmorphismBackground()
                             RoundedRectangle(cornerRadius: 20)
-                                .fill(Color(NSColor.darkGray).opacity(0.3))
+                                .fill(Color(NSColor.controlBackgroundColor).opacity(0.3))
                         }
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 20))
-                }
-                .padding(.top, 0) // Ensure no extra padding at top
             }
+            .padding(.top, 0) // Ensure no extra padding at top
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isExpanded)
+        // No animation needed - state is fixed
         .onAppear {
             withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
                 gradientRotation = 360
+            }
+            // Focus search field when window appears
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                isSearchFocused = true
+                onWindowVisible?()
             }
         }
     }
     
     private func performSearch() {
         guard !searchText.isEmpty || !attachedImages.isEmpty else { return }
-        
-        // Expand if not already
-        if !isExpanded {
-            onExpand()
-        }
         
         Task {
             await searchWithGemini(text: searchText, images: attachedImages)
@@ -373,7 +284,6 @@ struct FloatingSearchInterface: View {
 struct SolidSearchBar: View {
     @Binding var searchText: String
     @Binding var attachedImages: [NSImage]
-    let showNeonBorder: Bool
     let onSearch: () -> Void
     let onFocus: () -> Void
     @FocusState var isSearchFocused: Bool
@@ -392,7 +302,7 @@ struct SolidSearchBar: View {
                 // Search icon
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.primary.opacity(0.5))
+                    .foregroundColor(.primary.opacity(0.7))
                 
                 // Custom TextField with paste support
                 PasteableTextField(
@@ -413,7 +323,7 @@ struct SolidSearchBar: View {
                         }) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 14))
-                                .foregroundColor(.secondary.opacity(0.4))
+                                .foregroundColor(.secondary.opacity(0.6))
                         }
                         .buttonStyle(.plain)
                     }
@@ -422,7 +332,7 @@ struct SolidSearchBar: View {
                     Button(action: captureScreen) {
                         Image(systemName: "camera.fill")
                             .font(.system(size: 14))
-                            .foregroundColor(.secondary.opacity(0.5))
+                            .foregroundColor(.secondary.opacity(0.7))
                     }
                     .buttonStyle(.plain)
                     
@@ -430,7 +340,7 @@ struct SolidSearchBar: View {
                     Button(action: {}) {
                         Image(systemName: "mic.fill")
                             .font(.system(size: 14))
-                            .foregroundColor(.secondary.opacity(0.5))
+                            .foregroundColor(.secondary.opacity(0.7))
                     }
                     .buttonStyle(.plain)
                 }
@@ -450,9 +360,12 @@ struct SolidSearchBar: View {
 
 // MARK: - Glassmorphism Background
 struct GlassmorphismBackground: NSViewRepresentable {
+    @Environment(\.colorScheme) var colorScheme
+    
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
-        view.material = .hudWindow  // Ultra dark with blur
+        // Adaptive material based on color scheme for better contrast
+        view.material = colorScheme == .dark ? .contentBackground : .sidebar
         view.blendingMode = .behindWindow
         view.state = .active
         view.wantsLayer = true
@@ -473,7 +386,7 @@ struct EmptyStateView: View {
                 .font(.system(size: 32))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [.blue.opacity(0.4), .purple.opacity(0.4)],
+                        colors: [.blue.opacity(0.6), .purple.opacity(0.6)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -481,7 +394,7 @@ struct EmptyStateView: View {
             
             Text("What can I help you find?")
                 .font(.system(size: 15, weight: .medium))
-                .foregroundColor(.primary.opacity(0.6))
+                .foregroundColor(.primary.opacity(0.85))
             
             Spacer()
         }
@@ -504,5 +417,38 @@ struct LoadingIndicator: View {
             Capsule()
                 .fill(Color.gray.opacity(0.15))
         )
+    }
+}
+
+// MARK: - Adaptive Glassmorphism Modifier
+extension View {
+    func adaptiveGlassmorphism(cornerRadius: CGFloat = 20) -> some View {
+        self.modifier(AdaptiveGlassmorphismModifier(cornerRadius: cornerRadius))
+    }
+}
+
+struct AdaptiveGlassmorphismModifier: ViewModifier {
+    @Environment(\.colorScheme) var colorScheme
+    let cornerRadius: CGFloat
+    
+    func body(content: Content) -> some View {
+        content
+            .background {
+                ZStack {
+                    // Adaptive material based on color scheme
+                    if colorScheme == .dark {
+                        // Lighter background in dark mode for better contrast
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .fill(Color.gray.opacity(0.15))
+                            .background(.ultraThinMaterial)
+                    } else {
+                        // Darker background in light mode
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .fill(Color.black.opacity(0.05))
+                            .background(.regularMaterial)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            }
     }
 }
