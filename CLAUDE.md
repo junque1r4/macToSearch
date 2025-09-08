@@ -1,189 +1,459 @@
-# macToSearch - Histórico de Tentativas de Correção da Captura de Tela
+# CLAUDE.md - macToSearch Development Guide
 
-## Problema Principal
-O aplicativo macToSearch deveria capturar a tela inteira com todos os aplicativos visíveis (como Xcode, Terminal, etc.) quando o usuário pressiona Command + Shift + Space, similar ao Circle to Search do Google. No entanto, está capturando apenas o papel de parede (wallpaper) sem mostrar os aplicativos abertos.
+## 🎯 Project Context
 
-## Tentativas de Correção Realizadas
+macToSearch is a **premium macOS application** that implements Google's Circle to Search functionality with advanced AI capabilities. This is a **SwiftUI-first** project targeting **macOS 14.0+** with a focus on **glassmorphic design**, **native performance**, and **exceptional user experience**.
 
-### 1. Remoção da Opacidade no DrawingOverlayView
-**Arquivo:** `DrawingOverlayView.swift`
-**Mudança:** Removemos `.opacity(0.9)` da imagem de fundo
-**Resultado:** ❌ Não resolveu - continuou mostrando apenas o wallpaper
+## 🏗 Architecture Principles
 
-### 2. Modificação do SCContentFilter
-**Arquivo:** `ScreenCaptureManager.swift` e `ScreenCaptureManagerV2.swift`
-**Mudanças tentadas:**
-- Adicionamos comentários sobre captura sem transparência
-- Configuramos `backgroundColor = .clear`
-- Tentamos excluir janelas do próprio app da captura
-**Resultado:** ❌ Não resolveu - SCContentFilter falha com erro de permissão TCC
+### MANDATORY Requirements
+- **BP-1 (MUST)**: ALWAYS use SwiftUI with @Observable pattern for state management
+- **BP-2 (MUST)**: NEVER use UIKit/AppKit unless absolutely necessary for system integration
+- **BP-3 (MUST)**: ALWAYS implement proper error handling with Result types or async throws
+- **BP-4 (MUST)**: NEVER commit API keys or sensitive data - use environment variables
+- **BP-5 (MUST)**: ALWAYS maintain 99%+ Swift code (no Objective-C unless required by system APIs)
 
-### 3. Minimização da Janela Principal
-**Arquivo:** `AppDelegate.swift`
-**Mudança:** Tentamos minimizar a janela principal antes da captura com `mainWindow.miniaturize(nil)`
-**Resultado:** ❌ Piorou - a tela ficou completamente preta
+### Design System Requirements
+- **DS-1 (MUST)**: ALWAYS use glassmorphic design with `.ultraThinMaterial` or `.regularMaterial`
+- **DS-2 (MUST)**: IMPLEMENT animated gradients for borders and highlights:
+  ```swift
+  AngularGradient(
+      colors: [.blue, .purple, .pink, .orange, .yellow, .green, .blue],
+      center: .center,
+      angle: .degrees(rotation)
+  )
+  ```
+- **DS-3 (MUST)**: USE spring animations with natural physics:
+  ```swift
+  .animation(.spring(response: 0.5, dampingFraction: 0.8), value: state)
+  ```
+- **DS-4 (MUST)**: MAINTAIN consistent corner radius: 20pt for cards, 28pt for main elements
+- **DS-5 (MUST)**: SUPPORT Dark Mode automatically using semantic colors
 
-### 4. Uso de NSApp.hide()
-**Arquivo:** `AppDelegate.swift`
-**Mudança:** Tentamos esconder o app completamente antes da captura
-**Resultado:** ❌ Piorou - apenas o wallpaper apareceu, sem nenhum app
+## 💻 Swift & SwiftUI Standards
 
-### 5. Remoção Total de Interferências
-**Arquivo:** `AppDelegate.swift`
-**Mudança:** Removemos todas as tentativas de esconder/minimizar janelas
-**Resultado:** ❌ Voltou a mostrar apenas o wallpaper
+### Code Style Guidelines
 
-### 6. Métodos Alternativos de Captura
-
-#### 6.1 CGWindowListCreateImage com Diferentes Opções
-**Tentativas:**
 ```swift
-// Tentativa 1 - Básica
-CGWindowListCreateImage(screenRect, .optionOnScreenOnly, kCGNullWindowID, .bestResolution)
+// CORRECT: Modern Swift with explicit types where helpful
+@Observable
+final class ScreenCaptureManager {
+    private(set) var isCapturing = false
+    private let captureQueue = DispatchQueue(label: "capture", qos: .userInitiated)
+    
+    func captureScreen() async throws -> NSImage {
+        // Implementation
+    }
+}
 
-// Tentativa 2 - Com múltiplas opções
-CGWindowListCreateImage(screenRect, [.optionOnScreenOnly, .optionIncludingWindow], 
-                        kCGNullWindowID, [.bestResolution, .boundsIgnoreFraming])
-
-// Tentativa 3 - Com optionAll
-CGWindowListCreateImage(screenRect, .optionAll, kCGNullWindowID, .bestResolution)
+// WRONG: Old patterns
+class ScreenCaptureManager: ObservableObject {
+    @Published var isCapturing: Bool = false // Don't use @Published with @Observable
+}
 ```
-**Resultado:** ❌ Todas capturam apenas o wallpaper
 
-#### 6.2 CGDisplayCreateImage
-**Código:**
+### SwiftUI Best Practices
+
 ```swift
-let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-CGDisplayCreateImage(displayID.uint32Value)
-```
-**Resultado:** ❌ Também captura apenas o wallpaper
+// CORRECT: Extracted views with clear responsibilities
+struct FloatingSearchBar: View {
+    @Binding var searchText: String
+    let onSearch: () -> Void
+    
+    var body: some View {
+        // Focused implementation
+    }
+}
 
-#### 6.3 SCScreenshotManager (ScreenCaptureKit)
-**Problema:** Requer permissão de Screen Recording
-**Erro:** "The user declined TCCs for application, window, display capture"
-**Resultado:** ❌ Falha devido a permissões
-
-### 7. Configurações de Entitlements e Info.plist
-**Verificado:**
-- `NSScreenCaptureUsageDescription` está presente
-- App Sandbox está desabilitado (`com.apple.security.app-sandbox = 0`)
-- Permissões de leitura/escrita estão habilitadas
-**Resultado:** ✅ Configurações estão corretas, mas não resolvem o problema
-
-### 8. Ordem de Execução e Timing
-**Tentativas:**
-- Adicionar delay antes da captura
-- Esconder overlay com `orderOut(nil)` antes da captura
-- Diferentes tempos de espera (100ms, 200ms, 500ms)
-**Resultado:** ❌ Não afetou o resultado
-
-### 9. Métodos de Fallback
-**Implementado:** Sistema de fallback com múltiplos métodos de captura em sequência:
-1. SCScreenshotManager (falha por permissão)
-2. CGWindowListCreateImage (captura apenas wallpaper)
-3. CGDisplayCreateImage (captura apenas wallpaper)
-**Resultado:** ❌ Todos os métodos falham ou capturam incorretamente
-
-## Problema Atual
-
-### O que funciona:
-- ✅ O overlay aparece corretamente
-- ✅ O usuário consegue desenhar e selecionar áreas
-- ✅ O OCR funciona na área selecionada
-- ✅ A integração com Gemini funciona
-- ✅ O cropping da imagem funciona corretamente
-
-### O que NÃO funciona:
-- ❌ A captura de tela mostra apenas o wallpaper
-- ❌ Aplicativos abertos (Xcode, Terminal, etc.) não aparecem na captura
-- ❌ CGWindowListCreateImage e CGDisplayCreateImage ambos falham em capturar janelas de aplicativos
-
-## Logs de Debug
-```
-Trying direct capture...
-Direct capture failed: Error Domain=com.apple.ScreenCaptureKit.SCStreamErrorDomain Code=-3801 
-"The user declined TCCs for application, window, display capture"
-Trying simple screenshot...
-Capturing simple screenshot...
-CGDisplay capture successful
+// WRONG: Massive single views
+struct ContentView: View {
+    // 500+ lines of nested views
+}
 ```
 
-## Possíveis Causas
+### Async/Await Pattern
 
-1. **Problema de Permissões do macOS**: Mesmo com as configurações corretas, o macOS pode estar bloqueando a captura de janelas de outros aplicativos
-
-2. **Problema de Window Server**: As APIs CGWindowList e CGDisplay podem não estar conseguindo acessar o compositor de janelas corretamente
-
-3. **Problema de Timing**: Pode haver uma condição de corrida onde as janelas não estão disponíveis no momento da captura
-
-4. **Limitação da API**: As APIs podem ter mudado no macOS recente e não capturam mais janelas de terceiros sem permissão explícita
-
-### 10. Implementação com ScreenCaptureKit usando Permissão Confirmada
-**Arquivo:** `AppDelegate.swift`
-**Mudança:** Após confirmar que a permissão de Screen Recording está ativa, implementamos:
 ```swift
-let content = try await SCShareableContent.current
-let filter = SCContentFilter(display: display, excludingWindows: [])
-let screenshot = try await SCScreenshotManager.captureImage(
-    contentFilter: filter,
-    configuration: configuration
-)
+// CORRECT: Modern concurrency
+func processImage(_ image: NSImage) async throws -> ProcessedResult {
+    async let ocrResult = extractText(from: image)
+    async let analysisResult = analyzeContent(of: image)
+    
+    let (text, analysis) = try await (ocrResult, analysisResult)
+    return ProcessedResult(text: text, analysis: analysis)
+}
+
+// WRONG: Callback hell or completion handlers
 ```
-**Resultado:** ❌ Ainda captura apenas o wallpaper, mesmo com permissão explícita
 
-### 11. Correção do ESC no Overlay
-**Arquivo:** `OverlayWindow.swift`
-**Mudança:** Adicionamos override de `keyDown` para capturar ESC (keycode 53)
-**Resultado:** ✅ ESC agora funciona corretamente para fechar o overlay
+## 🎨 Glassmorphism Implementation
 
-## Status Atual (Após Todas as Tentativas)
+### Required Visual Effects
 
-### ✅ O que FUNCIONA:
-- ESC fecha o overlay corretamente
-- Permissão de Screen Recording está ativa no sistema
-- O overlay aparece e permite desenho
-- OCR e processamento funcionam na área selecionada
-- A integração com Gemini funciona
-
-### ❌ O que NÃO FUNCIONA:
-- **PROBLEMA PRINCIPAL**: Mesmo com permissão de Screen Recording ativa, todas as APIs de captura (SCScreenshotManager, CGWindowListCreateImage, CGDisplayCreateImage) retornam apenas o wallpaper sem os aplicativos
-
-## Logs de Debug Mais Recentes
+```swift
+// Standard glass background for all floating elements
+.background {
+    ZStack {
+        Color.clear
+            .background(.ultraThinMaterial)
+            .blur(radius: 20)
+        
+        Color(NSColor.controlBackgroundColor)
+            .opacity(0.3)
+    }
+}
+.clipShape(RoundedRectangle(cornerRadius: 20))
+.overlay {
+    RoundedRectangle(cornerRadius: 20)
+        .stroke(
+            LinearGradient(
+                colors: [.white.opacity(0.3), .clear],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            lineWidth: 1
+        )
+}
 ```
-Trying ScreenCaptureKit with permission...
-Found 1 displays and X windows
-Using display: 2056x1329
-ScreenCaptureKit capture successful!
+
+### Neon Border Animation
+
+```swift
+// Required for primary interactive elements
+@State private var gradientRotation = 0.0
+
+.overlay {
+    RoundedRectangle(cornerRadius: 28)
+        .stroke(
+            AngularGradient(
+                colors: [.blue, .purple, .pink, .orange, .yellow, .green, .blue],
+                center: .center,
+                angle: .degrees(gradientRotation)
+            ),
+            lineWidth: 2
+        )
+        .shadow(color: .blue.opacity(0.6), radius: 10)
+        .shadow(color: .purple.opacity(0.4), radius: 15)
+}
+.onAppear {
+    withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
+        gradientRotation = 360
+    }
+}
 ```
-Mas a imagem capturada ainda mostra apenas o wallpaper.
 
-## Possíveis Causas Atualizadas
+## 🔧 Project-Specific Commands
 
-1. **Bug do macOS**: Pode haver um bug na implementação atual do macOS onde as APIs não respeitam a permissão de Screen Recording corretamente
+### Build & Test
+```bash
+# Development build with verbose output
+xcodebuild -project macToSearch.xcodeproj -scheme macToSearch -configuration Debug build
 
-2. **Problema de Timing com ScreenCaptureKit**: A API pode estar capturando antes das janelas serem compostas
+# Run all tests
+xcodebuild test -project macToSearch.xcodeproj -scheme macToSearch
 
-3. **Filtro Incorreto**: O `SCContentFilter` pode precisar de configuração específica para incluir janelas de terceiros
+# Create release archive
+xcodebuild archive -project macToSearch.xcodeproj -scheme macToSearch -archivePath ./build/macToSearch.xcarchive
 
-4. **Problema de Composição**: O Window Server pode não estar incluindo as janelas na captura por alguma razão
+# Export for distribution
+xcodebuild -exportArchive -archivePath ./build/macToSearch.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist
+```
 
-## Próximos Passos Sugeridos
+### Code Quality
+```bash
+# Run SwiftLint (must be installed)
+swiftlint
 
-1. **Listar e Debug Janelas Disponíveis**:
-   ```swift
-   for window in content.windows {
-       print("Window: \(window.title ?? "untitled") - on screen: \(window.isOnScreen)")
-   }
-   ```
+# Auto-fix SwiftLint issues
+swiftlint --fix
 
-2. **Tentar Captura de Janela Individual**:
-   - Em vez de capturar o display inteiro, capturar janelas individuais e compor
+# Check for unused code
+periphery scan
+```
 
-3. **Usar Stream em vez de Screenshot**:
-   - Criar um SCStream e capturar um frame dele
+## 🏛 File Organization
 
-4. **Verificar Console Logs**:
-   - Procurar por erros do WindowServer ou ScreenCaptureKit no Console.app
+### MANDATORY Structure
+```
+Feature/
+├── Models/          # Data models and state
+├── Views/           # SwiftUI views only
+├── ViewModels/      # @Observable view models
+├── Services/        # External integrations
+└── Utilities/       # Helpers and extensions
+```
 
-## Observação Importante
-Este é um problema complexo que parece estar relacionado a como o macOS moderno lida com privacidade e captura de tela. Mesmo com todas as permissões corretas, as APIs não estão funcionando como esperado. Isso pode requerer uma abordagem completamente diferente ou aguardar uma correção da Apple.
+### Naming Conventions
+- **Views**: `[Feature]View.swift` (e.g., `DrawingOverlayView.swift`)
+- **View Models**: `[Feature]ViewModel.swift` or `[Feature]State.swift`
+- **Services**: `[Feature]Service.swift` (e.g., `GeminiService.swift`)
+- **Models**: Singular nouns (e.g., `SearchHistory.swift`, not `SearchHistories.swift`)
+
+## 🚀 Performance Requirements
+
+### Optimization Checklist
+- [ ] Views are extracted when > 50 lines
+- [ ] Heavy computations use `Task.detached`
+- [ ] Images are cached after processing
+- [ ] Animations use `.animation` modifier, not `withAnimation` where possible
+- [ ] List/ScrollView uses `LazyVStack` for large datasets
+- [ ] @Observable properties are `private(set)` when possible
+
+### Memory Management
+```swift
+// CORRECT: Weak self in closures
+Task { [weak self] in
+    guard let self else { return }
+    await self.processData()
+}
+
+// CORRECT: Proper cleanup
+.onDisappear {
+    captureTask?.cancel()
+    captureTask = nil
+}
+```
+
+## 🔒 Security & Privacy
+
+### API Key Management
+```swift
+// NEVER hardcode keys
+private let apiKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"] ?? ""
+
+// Store in Keychain for production
+KeychainWrapper.standard.set(apiKey, forKey: "gemini_api_key")
+```
+
+### Permission Handling
+```swift
+// ALWAYS check permissions before accessing
+func requestScreenRecordingPermission() async -> Bool {
+    guard !CGPreflightScreenCaptureAccess() else { return true }
+    
+    return await withCheckedContinuation { continuation in
+        CGRequestScreenCaptureAccess { granted in
+            continuation.resume(returning: granted)
+        }
+    }
+}
+```
+
+## 🐛 Error Handling
+
+### Standard Error Pattern
+```swift
+enum CaptureError: LocalizedError {
+    case permissionDenied
+    case captureFailure(underlying: Error)
+    case processingTimeout
+    
+    var errorDescription: String? {
+        switch self {
+        case .permissionDenied:
+            return "Screen recording permission is required"
+        case .captureFailure(let error):
+            return "Capture failed: \(error.localizedDescription)"
+        case .processingTimeout:
+            return "Processing took too long"
+        }
+    }
+}
+```
+
+## 📝 Documentation Standards
+
+### Required Documentation
+```swift
+/// Captures the current screen and returns a processed image
+/// - Parameters:
+///   - region: The specific region to capture, nil for full screen
+///   - options: Capture configuration options
+/// - Returns: A processed NSImage ready for OCR
+/// - Throws: `CaptureError` if permissions are missing or capture fails
+func captureScreen(
+    region: CGRect? = nil,
+    options: CaptureOptions = .default
+) async throws -> NSImage
+```
+
+## 🧪 Testing Requirements
+
+### Test Coverage Goals
+- **Unit Tests**: 80%+ coverage for Services and ViewModels
+- **Integration Tests**: Critical user flows (capture → OCR → AI)
+- **UI Tests**: Happy path for main features
+
+### Test Structure
+```swift
+final class GeminiServiceTests: XCTestCase {
+    var sut: GeminiService!
+    
+    override func setUp() {
+        super.setUp()
+        sut = GeminiService(apiKey: "test_key")
+    }
+    
+    func testSearchWithText() async throws {
+        // Given
+        let query = "test query"
+        
+        // When
+        let result = try await sut.searchWithText(query)
+        
+        // Then
+        XCTAssertFalse(result.isEmpty)
+    }
+}
+```
+
+## 🎯 AI Integration Guidelines
+
+### Gemini API Best Practices
+```swift
+// ALWAYS include system prompts for consistency
+private func buildPrompt(query: String, context: String? = nil) -> String {
+    """
+    You are a helpful AI assistant integrated into macToSearch.
+    Provide concise, relevant answers with proper markdown formatting.
+    Use code blocks for technical content.
+    
+    \(context.map { "Context: \($0)\n" } ?? "")
+    Query: \(query)
+    """
+}
+
+// IMPLEMENT retry logic
+func sendRequest<T>(
+    _ request: Request<T>,
+    maxRetries: Int = 3
+) async throws -> T {
+    for attempt in 0..<maxRetries {
+        do {
+            return try await performRequest(request)
+        } catch {
+            if attempt == maxRetries - 1 { throw error }
+            await Task.sleep(nanoseconds: UInt64(pow(2.0, Double(attempt)) * 1_000_000_000))
+        }
+    }
+    throw RequestError.maxRetriesExceeded
+}
+```
+
+## 🎬 Animation Guidelines
+
+### Required Animations
+```swift
+// Entry animations for views
+.transition(.asymmetric(
+    insertion: .scale.combined(with: .opacity),
+    removal: .scale(scale: 0.95).combined(with: .opacity)
+))
+
+// State changes
+.animation(.spring(response: 0.3, dampingFraction: 0.7), value: state)
+
+// Loading states
+ProgressView()
+    .scaleEffect(0.8)
+    .opacity(isLoading ? 1 : 0)
+    .animation(.easeInOut(duration: 0.2), value: isLoading)
+```
+
+## 🔄 Git Workflow
+
+### Commit Message Format
+```
+<type>: <description>
+
+[optional body]
+
+Types:
+- feat: New feature
+- fix: Bug fix
+- perf: Performance improvement
+- refactor: Code refactoring
+- docs: Documentation
+- test: Tests
+- style: Code style/formatting
+```
+
+### Branch Naming
+- `feature/description-here`
+- `fix/issue-description`
+- `perf/optimization-description`
+
+## 🚦 Pre-Release Checklist
+
+Before EVERY release:
+- [ ] All tests pass
+- [ ] SwiftLint reports no violations
+- [ ] No hardcoded API keys
+- [ ] Memory leaks checked with Instruments
+- [ ] Performance profiled for main flows
+- [ ] Dark mode tested
+- [ ] Multi-monitor tested
+- [ ] Permissions flow tested on clean install
+- [ ] Error states have user-friendly messages
+- [ ] README is up to date
+
+## 💡 Quick Reference
+
+### Common Patterns
+```swift
+// Floating window setup
+window.level = .floating
+window.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
+window.backgroundColor = .clear
+window.isOpaque = false
+window.hasShadow = false
+
+// Global hotkey registration
+NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
+    // Handle hotkey
+}
+
+// Screen capture with fallback
+let screenshot = try await ScreenCaptureKit.capture() 
+    ?? CGDisplayCreateImage(CGMainDisplayID())
+    ?? fallbackCapture()
+```
+
+## 🔗 Important Links
+
+- [ScreenCaptureKit Documentation](https://developer.apple.com/documentation/screencapturekit)
+- [Vision Framework Guide](https://developer.apple.com/documentation/vision)
+- [SwiftUI Layout System](https://developer.apple.com/documentation/swiftui/layout)
+- [Gemini API Reference](https://ai.google.dev/docs)
+
+## 📌 Critical Notes
+
+1. **NEVER** use synchronous operations on the main thread
+2. **ALWAYS** handle the case where screen recording permission is denied
+3. **NEVER** assume OCR will succeed - always have fallback UI
+4. **ALWAYS** test with both Light and Dark mode
+5. **NEVER** block user interaction during network requests
+6. **ALWAYS** provide visual feedback for every user action
+7. **NEVER** use force unwrapping except in IBOutlets (which we don't use)
+8. **ALWAYS** use semantic colors (e.g., `.primary`, not `.black`)
+
+## ⚠️ Known Issues & Solutions
+
+### Screen Capture Problem
+**Issue**: Currently capturing only wallpaper without applications
+**Status**: Under investigation - likely macOS permission or timing issue
+**Workaround**: Ensure Screen Recording permission is granted in System Settings
+
+### Solutions Attempted:
+1. ✅ ESC key now properly closes overlay (OverlayWindow.swift)
+2. ❌ Various capture methods (CGWindowList, CGDisplay, SCScreenshotManager)
+3. ❌ Permission and timing adjustments
+
+**Next Steps**:
+- Debug window availability in SCShareableContent
+- Try SCStream instead of screenshot API
+- Check Console.app for WindowServer errors
+
+---
+
+**Remember**: This is a PREMIUM application. Every interaction should feel smooth, every animation deliberate, and every error handled gracefully. Think Apple-level polish with Google-level intelligence.

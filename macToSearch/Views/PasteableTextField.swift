@@ -77,6 +77,8 @@ struct PasteableTextField: NSViewRepresentable {
         textField.backgroundColor = .clear
         textField.focusRingType = .none
         textField.font = .systemFont(ofSize: 16)
+        textField.textColor = .labelColor  // Adaptive color for text
+        textField.drawsBackground = false  // Ensure transparent background
         
         // Set up paste handler
         textField.onPasteImages = { pastedImages in
