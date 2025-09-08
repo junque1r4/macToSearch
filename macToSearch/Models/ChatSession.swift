@@ -130,9 +130,11 @@ struct StoredChatMessage: Codable, Identifiable {
         }
         
         return MinimalChatMessage(
+            id: id,
             content: content,
             images: images,
-            isUser: isUser
+            isUser: isUser,
+            timestamp: timestamp
         )
     }
 }

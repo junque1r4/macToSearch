@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AppKit
+import SwiftData
 
 // MARK: - Floating Search Window
 class FloatingSearchWindow: NSPanel {
@@ -18,6 +19,21 @@ class FloatingSearchWindow: NSPanel {
     private let searchBarWidth: CGFloat = 600
     private var searchFieldFocusHandler: (() -> Void)?
     private var clearChatHandler: (() -> Void)?
+    
+    // SwiftData ModelContainer
+    private lazy var modelContainer: ModelContainer = {
+        let schema = Schema([
+            ChatSession.self,
+            SearchHistory.self
+        ])
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        
+        do {
+            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+        } catch {
+            fatalError("Could not create ModelContainer: \(error)")
+        }
+    }()
     
     init(appState: AppState? = nil) {
         self.appState = appState
@@ -79,7 +95,11 @@ class FloatingSearchWindow: NSPanel {
             NotificationCenter.default.post(name: NSNotification.Name("ClearChat"), object: nil)
         }
         
-        hostingView = NSHostingView(rootView: AnyView(content))
+        // Create hosting view with ModelContainer in environment
+        hostingView = NSHostingView(rootView: AnyView(
+            content
+                .modelContainer(modelContainer)  // Pass the ModelContainer
+        ))
         hostingView?.frame = contentView?.bounds ?? .zero
         hostingView?.autoresizingMask = [.width, .height]
         
@@ -124,7 +144,15 @@ class FloatingSearchWindow: NSPanel {
         let hasCommand = event.modifierFlags.contains(.command)
         let hasShift = event.modifierFlags.contains(.shift)
         
-        if hasCommand && event.charactersIgnoringModifiers == "k" {
+        // Command+Shift+S for Settings
+        if hasCommand && hasShift && event.charactersIgnoringModifiers == "s" {
+            print("[DEBUG] Command+Shift+S detected")
+            if let appDelegate = NSApp.delegate as? AppDelegate {
+                print("[DEBUG] Calling openPreferences from keyboard shortcut")
+                appDelegate.openPreferences()
+            }
+            return true
+        } else if hasCommand && event.charactersIgnoringModifiers == "k" {
             clearChatHandler?()
             return true
         } else if hasCommand && hasShift && event.charactersIgnoringModifiers == "n" {
@@ -197,6 +225,7 @@ struct FloatingSearchInterface: View {
                 onFocus: {},
                 onClearChat: handleClearChat,
                 onShowHistory: toggleHistory,
+                onOpenSettings: openSettings,
                 isSearchFocused: _isSearchFocused
             )
             .background(
@@ -224,6 +253,7 @@ struct FloatingSearchInterface: View {
                     HistorySidebarView(
                         selectedSession: $selectedSession,
                         currentMessages: $messages,
+                        historyManager: historyManager,
                         onNewChat: handleClearChat
                     )
                     .frame(width: 280)
@@ -288,6 +318,19 @@ struct FloatingSearchInterface: View {
     private func toggleHistory() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             showHistory.toggle()
+        }
+    }
+    
+    private func openSettings() {
+        print("[DEBUG] openSettings called")
+        if let appDelegate = NSApp.delegate as? AppDelegate {
+            print("[DEBUG] AppDelegate cast successful")
+            appDelegate.openPreferences()
+        } else {
+            print("[DEBUG] AppDelegate cast failed - creating SettingsWindow directly")
+            // Direct fallback
+            let settings = SettingsWindow()
+            settings.showSettings(animated: true)
         }
     }
     
@@ -356,7 +399,17 @@ struct FloatingSearchInterface: View {
     }
     
     private func handleClearChat() {
-        // Just clear without confirmation
+        print("[FloatingSearch] handleClearChat called with \(messages.count) messages")
+        
+        // Save current chat to history before clearing (if not empty)
+        if !messages.isEmpty {
+            print("[FloatingSearch] Saving messages before clear")
+            historyManager.saveToCurrentSession(messages: messages)
+        } else {
+            print("[FloatingSearch] No messages to save")
+        }
+        
+        // Now clear for new chat
         clearChat()
     }
     
@@ -379,6 +432,7 @@ struct SolidSearchBar: View {
     let onFocus: () -> Void
     let onClearChat: () -> Void
     let onShowHistory: () -> Void
+    let onOpenSettings: () -> Void
     @FocusState var isSearchFocused: Bool
     
     var body: some View {
@@ -438,6 +492,18 @@ struct SolidSearchBar: View {
                     }
                     .buttonStyle(.plain)
                     .help("New Chat (⌘⇧N)")
+                    
+                    // Settings button
+                    Button(action: {
+                        print("[DEBUG] Settings button clicked")
+                        onOpenSettings()
+                    }) {
+                        Image(systemName: "gear")
+                            .font(.system(size: 16))
+                            .foregroundColor(.primary.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Settings (⌘⇧S)")
                 }
             }
             .padding(.horizontal, 16)

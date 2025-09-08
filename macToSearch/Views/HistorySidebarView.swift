@@ -13,6 +13,7 @@ struct HistorySidebarView: View {
     @Query(sort: \ChatSession.updatedAt, order: .reverse) private var sessions: [ChatSession]
     @Binding var selectedSession: ChatSession?
     @Binding var currentMessages: [MinimalChatMessage]
+    let historyManager: ChatHistoryManager
     let onNewChat: () -> Void
     
     @State private var hoveredSession: ChatSession?
@@ -178,6 +179,9 @@ struct HistorySidebarView: View {
             selectedSession = session
             // Convert stored messages to MinimalChatMessage
             currentMessages = session.messages.map { $0.toMinimalChatMessage() }
+            
+            // Sync with history manager to track current session
+            historyManager.setCurrentSession(session)
         }
     }
     

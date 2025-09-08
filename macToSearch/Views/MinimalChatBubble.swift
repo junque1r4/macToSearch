@@ -8,27 +8,32 @@
 import SwiftUI
 
 struct MinimalChatMessage: Identifiable {
-    let id = UUID()
+    let id: UUID
     let content: String
     let image: NSImage?  // Keep for backward compatibility
     let images: [NSImage]?  // New field for multiple images
     let isUser: Bool
-    let timestamp: Date = Date()
+    let timestamp: Date
     
-    // Convenience initializer for single image
-    init(content: String, image: NSImage?, isUser: Bool) {
-        self.content = content
-        self.image = image
-        self.images = image != nil ? [image!] : nil
-        self.isUser = isUser
-    }
-    
-    // Initializer for multiple images
-    init(content: String, images: [NSImage]?, isUser: Bool) {
+    // Full initializer with all parameters
+    init(id: UUID = UUID(), content: String, images: [NSImage]? = nil, isUser: Bool, timestamp: Date = Date()) {
+        self.id = id
         self.content = content
         self.image = images?.first
         self.images = images
+        
         self.isUser = isUser
+        self.timestamp = timestamp
+    }
+    
+    // Conven   ience initializer for single image (backward compatibility)
+    init(content: String, image: NSImage?, isUser: Bool) {
+        self.init(id: UUID(), content: content, images: image != nil ? [image!] : nil, isUser: isUser, timestamp: Date())
+    }
+    
+    // Convenience initializer for multiple images
+    init(content: String, images: [NSImage]?, isUser: Bool) {
+        self.init(id: UUID(), content: content, images: images, isUser: isUser, timestamp: Date())
     }
 }
 

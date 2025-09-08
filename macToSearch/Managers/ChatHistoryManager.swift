@@ -23,7 +23,12 @@ final class ChatHistoryManager: ObservableObject {
     }
     
     // Create a new chat session
-    func createNewSession(with messages: [MinimalChatMessage] = []) -> ChatSession {
+    func createNewSession(with messages: [MinimalChatMessage] = []) -> ChatSession? {
+        // Don't create empty sessions
+        guard !messages.isEmpty else { 
+            return nil
+        }
+        
         let chatMessages = messages.map { StoredChatMessage(from: $0) }
         let session = ChatSession(messages: chatMessages)
         session.generateTitle()
@@ -39,9 +44,18 @@ final class ChatHistoryManager: ObservableObject {
     
     // Save current messages to active session
     func saveToCurrentSession(messages: [MinimalChatMessage]) {
+        // Don't save empty messages
+        guard !messages.isEmpty else { 
+            print("[ChatHistory] No messages to save")
+            return 
+        }
+        
+        print("[ChatHistory] Saving \(messages.count) messages to session")
+        
         // If no current session, create one
         if currentSession == nil {
             currentSession = createNewSession(with: messages)
+            print("[ChatHistory] Created new session: \(currentSession?.title ?? "nil")")
             return
         }
         
@@ -55,7 +69,14 @@ final class ChatHistoryManager: ObservableObject {
                 session.generateTitle()
             }
             
-            try? modelContext?.save()
+            print("[ChatHistory] Updated existing session: \(session.title)")
+            
+            do {
+                try modelContext?.save()
+                print("[ChatHistory] Session saved successfully")
+            } catch {
+                print("[ChatHistory] Save error: \(error)")
+            }
         }
     }
     
@@ -76,13 +97,21 @@ final class ChatHistoryManager: ObservableObject {
         return session.messages.map { $0.toMinimalChatMessage() }
     }
     
+    // Set current session (for syncing when selecting from history)
+    func setCurrentSession(_ session: ChatSession) {
+        currentSession = session
+    }
+    
     // Clear current session (for new chat)
     func clearCurrentSession() {
         if let current = currentSession {
+            // Mark as inactive and save if it has content
             current.isActive = false
+            if !current.messages.isEmpty {
+                try? modelContext?.save()
+            }
         }
         currentSession = nil
-        try? modelContext?.save()
     }
     
     // Delete a session

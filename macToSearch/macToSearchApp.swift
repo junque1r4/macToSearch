@@ -52,10 +52,12 @@ struct macToSearchApp: App {
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
         
-        Settings {
-            SettingsView()
-                .environmentObject(appState)
-                .environmentObject(hotkeyManager)
-        }
+        // Settings scene removed - using custom SettingsWindow instead
+        // This prevents macOS from intercepting Command+, shortcut
+        // Settings {
+        //     SettingsView()
+        //         .environmentObject(appState)
+        //         .environmentObject(hotkeyManager)
+        // }
     }
 }

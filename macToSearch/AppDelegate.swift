@@ -13,6 +13,7 @@ import CoreMedia
 class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOutput {
     var overlayWindow: OverlayWindow?
     var floatingSearchWindow: FloatingSearchWindow?
+    var settingsWindow: SettingsWindow?
     var mainWindow: NSWindow?
     var appState: AppState?
     var hotkeyManager: HotkeyManager?
@@ -280,8 +281,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
         
         statusMenu?.addItem(NSMenuItem.separator())
         
-        statusMenu?.addItem(NSMenuItem(title: "Preferences...", action: #selector(openPreferences), keyEquivalent: ","))
-        statusMenu?.items.last?.keyEquivalentModifierMask = [.command]
+        statusMenu?.addItem(NSMenuItem(title: "Preferences...", action: #selector(openPreferences), keyEquivalent: "s"))
+        statusMenu?.items.last?.keyEquivalentModifierMask = [.command, .shift]
         statusMenu?.items.last?.target = self
         
         statusMenu?.addItem(NSMenuItem.separator())
@@ -317,16 +318,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     }
     
     @objc func openPreferences() {
-        // Show the floating window for settings
-        // In future, could open a separate settings window
-        if let floatingWindow = floatingSearchWindow {
-            if !floatingWindow.isVisible {
-                floatingWindow.makeKeyAndOrderFront(nil)
-            }
-            // Window is always expanded - no need to call expand()
+        print("[DEBUG] openPreferences called in AppDelegate")
+        // Show the new settings window
+        if settingsWindow == nil {
+            print("[DEBUG] Creating new SettingsWindow")
+            settingsWindow = SettingsWindow()
         }
-        // Send notification to open settings
-        NotificationCenter.default.post(name: Notification.Name("OpenSettings"), object: nil)
+        print("[DEBUG] Showing settings window")
+        settingsWindow?.showSettings(animated: true)
     }
     
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
