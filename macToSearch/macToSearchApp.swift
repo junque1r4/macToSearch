@@ -18,6 +18,7 @@ struct macToSearchApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             SearchHistory.self,
+            ChatSession.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

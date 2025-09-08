@@ -17,6 +17,7 @@ class FloatingSearchWindow: NSPanel {
     private let windowHeight: CGFloat = 520  // Fixed height
     private let searchBarWidth: CGFloat = 600
     private var searchFieldFocusHandler: (() -> Void)?
+    private var clearChatHandler: (() -> Void)?
     
     init(appState: AppState? = nil) {
         self.appState = appState
@@ -72,6 +73,11 @@ class FloatingSearchWindow: NSPanel {
         content.onWindowVisible = { [weak self] in
             self?.focusSearchField()
         }
+        // Store clear chat handler for keyboard shortcuts
+        clearChatHandler = {
+            // Trigger clear chat in the interface
+            NotificationCenter.default.post(name: NSNotification.Name("ClearChat"), object: nil)
+        }
         
         hostingView = NSHostingView(rootView: AnyView(content))
         hostingView?.frame = contentView?.bounds ?? .zero
@@ -94,15 +100,43 @@ class FloatingSearchWindow: NSPanel {
     
     // Expansion methods removed - window is always expanded
     
-    // Handle ESC key - close window when pressed
+    // Handle keyboard shortcuts
     override func keyDown(with event: NSEvent) {
+        // Check for Command modifier
+        let hasCommand = event.modifierFlags.contains(.command)
+        let hasShift = event.modifierFlags.contains(.shift)
+        
         if event.keyCode == 53 { // ESC key
             // Make sure to resign first responder to release focus
             self.makeFirstResponder(nil)
             self.close() // Close the window completely
+        } else if hasCommand && event.charactersIgnoringModifiers == "k" { // Command+K
+            clearChatHandler?()
+        } else if hasCommand && hasShift && event.charactersIgnoringModifiers == "n" { // Command+Shift+N  
+            clearChatHandler?()
         } else {
             super.keyDown(with: event)
         }
+    }
+    
+    // Also handle performKeyEquivalent for menu-like shortcuts
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let hasCommand = event.modifierFlags.contains(.command)
+        let hasShift = event.modifierFlags.contains(.shift)
+        
+        if hasCommand && event.charactersIgnoringModifiers == "k" {
+            clearChatHandler?()
+            return true
+        } else if hasCommand && hasShift && event.charactersIgnoringModifiers == "n" {
+            clearChatHandler?()
+            return true
+        } else if hasCommand && !hasShift && event.charactersIgnoringModifiers == "h" {
+            // Command+H for history toggle
+            NotificationCenter.default.post(name: NSNotification.Name("ShowHistory"), object: nil)
+            return true
+        }
+        
+        return super.performKeyEquivalent(with: event)
     }
     
     // Override cancelOperation to catch ESC even when TextField has focus
@@ -137,7 +171,9 @@ struct FloatingSearchInterface: View {
     let appState: AppState
     var onWindowVisible: (() -> Void)? = nil
     
+    @Environment(\.modelContext) private var modelContext
     @StateObject private var geminiService = GeminiService()
+    @StateObject private var historyManager = ChatHistoryManager()
     @State private var searchText = ""
     @State private var messages: [MinimalChatMessage] = []
     @State private var attachedImages: [NSImage] = []  // Changed to array for multiple images
@@ -145,68 +181,93 @@ struct FloatingSearchInterface: View {
     @FocusState private var isSearchFocused: Bool
     @State private var animateGradient = false
     @State private var gradientRotation: Double = 0
+    @State private var showHistory = false
+    @State private var selectedSession: ChatSession?
+    
+    private let clearChatNotification = NotificationCenter.default.publisher(for: NSNotification.Name("ClearChat"))
+    private let showHistoryNotification = NotificationCenter.default.publisher(for: NSNotification.Name("ShowHistory"))
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Always expanded - search bar + separate chat
-            VStack(spacing: 16) { // Add space between search bar and chat
-                    // Search bar - standalone at top
-                    SolidSearchBar(
-                        searchText: $searchText,
-                        attachedImages: $attachedImages,
-                        onSearch: performSearch,
-                        onFocus: {},
-                        isSearchFocused: _isSearchFocused
+        VStack(spacing: 16) {
+            // Search bar - always full width at top
+            SolidSearchBar(
+                searchText: $searchText,
+                attachedImages: $attachedImages,
+                onSearch: performSearch,
+                onFocus: {},
+                onClearChat: handleClearChat,
+                onShowHistory: toggleHistory,
+                isSearchFocused: _isSearchFocused
+            )
+            .background(
+                RoundedRectangle(cornerRadius: 28)
+                    .fill(Color(NSColor.windowBackgroundColor).opacity(0.95))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 28)
+                    .stroke(
+                        AngularGradient(
+                            colors: [.blue, .purple, .pink, .orange, .yellow, .green, .blue],
+                            center: .center,
+                            angle: .degrees(gradientRotation)
+                        ),
+                        lineWidth: 2
                     )
-                    .background(
-                        RoundedRectangle(cornerRadius: 28)
-                            .fill(Color(NSColor.windowBackgroundColor).opacity(0.95))
+                    .shadow(color: .blue.opacity(0.6), radius: 10)
+                    .shadow(color: .purple.opacity(0.4), radius: 15)
+            )
+            
+            // Chat area + History sidebar (same level)
+            HStack(spacing: 0) {
+                // History sidebar (conditional)
+                if showHistory {
+                    HistorySidebarView(
+                        selectedSession: $selectedSession,
+                        currentMessages: $messages,
+                        onNewChat: handleClearChat
                     )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 28)
-                            .stroke(
-                                AngularGradient(
-                                    colors: [.blue, .purple, .pink, .orange, .yellow, .green, .blue],
-                                    center: .center,
-                                    angle: .degrees(gradientRotation)
-                                ),
-                                lineWidth: 2
-                            )
-                            .shadow(color: .blue.opacity(0.6), radius: 10)
-                            .shadow(color: .purple.opacity(0.4), radius: 15)
-                    )
+                    .frame(width: 280)
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+                    .zIndex(1)
                     
-                    // Chat area - separate rounded rectangle
-                    VStack(spacing: 0) {
-                        if messages.isEmpty {
-                            EmptyStateView()
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        } else {
-                            MinimalChatContainer(messages: $messages)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        }
-                        
-                        // Loading indicator
-                        if isLoading {
-                            LoadingIndicator()
-                                .padding(.bottom, 12)
-                        }
+                    Divider()
+                        .opacity(0.3)
+                        .padding(.vertical, 8)
+                }
+                
+                // Chat area - collapses when history is shown
+                VStack(spacing: 0) {
+                    if messages.isEmpty {
+                        EmptyStateView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        MinimalChatContainer(messages: $messages)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(
-                        // Glassmorphism effect for chat area only
-                        ZStack {
-                            GlassmorphismBackground()
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(Color(NSColor.controlBackgroundColor).opacity(0.3))
-                        }
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    
+                    // Loading indicator
+                    if isLoading {
+                        LoadingIndicator()
+                            .padding(.bottom, 12)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(
+                    // Glassmorphism effect for chat area
+                    ZStack {
+                        GlassmorphismBackground()
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color(NSColor.controlBackgroundColor).opacity(0.3))
+                    }
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 20))
             }
-            .padding(.top, 0) // Ensure no extra padding at top
+            .frame(maxHeight: .infinity)
         }
         // No animation needed - state is fixed
         .onAppear {
+            // Set up history manager context
+            historyManager.setModelContext(modelContext)
             withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
                 gradientRotation = 360
             }
@@ -215,6 +276,18 @@ struct FloatingSearchInterface: View {
                 isSearchFocused = true
                 onWindowVisible?()
             }
+        }
+        .onReceive(clearChatNotification) { _ in
+            handleClearChat()
+        }
+        .onReceive(showHistoryNotification) { _ in
+            toggleHistory()
+        }
+    }
+    
+    private func toggleHistory() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            showHistory.toggle()
         }
     }
     
@@ -266,6 +339,9 @@ struct FloatingSearchInterface: View {
                 searchText = ""
                 attachedImages = []
                 isLoading = false
+                
+                // Save to history
+                historyManager.saveToCurrentSession(messages: messages)
             }
         } catch {
             await MainActor.run {
@@ -278,6 +354,21 @@ struct FloatingSearchInterface: View {
             }
         }
     }
+    
+    private func handleClearChat() {
+        // Just clear without confirmation
+        clearChat()
+    }
+    
+    private func clearChat() {
+        withAnimation(.easeOut(duration: 0.2)) {
+            messages = []
+            searchText = ""
+            attachedImages = []
+            selectedSession = nil
+            historyManager.clearCurrentSession()
+        }
+    }
 }
 
 // MARK: - Solid Search Bar
@@ -286,6 +377,8 @@ struct SolidSearchBar: View {
     @Binding var attachedImages: [NSImage]
     let onSearch: () -> Void
     let onFocus: () -> Void
+    let onClearChat: () -> Void
+    let onShowHistory: () -> Void
     @FocusState var isSearchFocused: Bool
     
     var body: some View {
@@ -328,31 +421,27 @@ struct SolidSearchBar: View {
                         .buttonStyle(.plain)
                     }
                     
-                    // Camera button
-                    Button(action: captureScreen) {
-                        Image(systemName: "camera.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary.opacity(0.7))
+                    // History button
+                    Button(action: onShowHistory) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 16))
+                            .foregroundColor(.primary.opacity(0.7))
                     }
                     .buttonStyle(.plain)
+                    .help("Chat History (⌘H)")
                     
-                    // Mic button
-                    Button(action: {}) {
-                        Image(systemName: "mic.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary.opacity(0.7))
+                    // New Chat button (moved to right side)
+                    Button(action: onClearChat) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.primary.opacity(0.7))
                     }
                     .buttonStyle(.plain)
+                    .help("New Chat (⌘⇧N)")
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-        }
-    }
-    
-    private func captureScreen() {
-        if let appDelegate = NSApp.delegate as? AppDelegate {
-            appDelegate.showDrawingOverlay()
         }
     }
 }
