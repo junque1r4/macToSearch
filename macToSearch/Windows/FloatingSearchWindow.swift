@@ -72,7 +72,8 @@ class FloatingSearchWindow: NSPanel {
         // Round corners
         contentView?.wantsLayer = true
         contentView?.layer?.cornerRadius = 20  // Standard corner radius for expanded state
-        contentView?.layer?.masksToBounds = true
+        // Removed masksToBounds to allow gradient border and shadows to show properly
+        // contentView?.layer?.masksToBounds = true
     }
     
     private func setupContent() {
@@ -245,6 +246,7 @@ struct FloatingSearchInterface: View {
                     .shadow(color: .blue.opacity(0.6), radius: 10)
                     .shadow(color: .purple.opacity(0.4), radius: 15)
             )
+            .padding(.horizontal, 4) // Add padding to prevent border clipping
             
             // Chat area + History sidebar (same level)
             HStack(spacing: 0) {
@@ -294,6 +296,7 @@ struct FloatingSearchInterface: View {
             }
             .frame(maxHeight: .infinity)
         }
+        .padding(3) // Add small padding around entire interface to prevent clipping
         // No animation needed - state is fixed
         .onAppear {
             // Set up history manager context
