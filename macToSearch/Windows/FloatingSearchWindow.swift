@@ -355,6 +355,10 @@ struct FloatingSearchInterface: View {
                 images: images,  // Pass array of images
                 isUser: true
             ))
+            
+            // Clear search text and images immediately after adding to chat
+            searchText = ""
+            attachedImages = []
         }
         
         do {
@@ -379,8 +383,6 @@ struct FloatingSearchInterface: View {
                     isUser: false
                 ))
                 
-                searchText = ""
-                attachedImages = []
                 isLoading = false
                 
                 // Save to history
