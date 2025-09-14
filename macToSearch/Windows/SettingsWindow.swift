@@ -654,7 +654,7 @@ struct AppearanceSettingsContent: View {
 }
 
 struct AIProviderSettingsContent: View {
-    @State private var currentAPIKey: String = ""
+    @AppStorage("gemini_api_key") private var storedAPIKey: String = ""
     @State private var newAPIKey: String = ""
     @State private var isValidating: Bool = false
     @State private var validationMessage: String = ""
@@ -663,7 +663,6 @@ struct AIProviderSettingsContent: View {
     @State private var availableModels: [String] = []
     @AppStorage("gemini_model") private var selectedModel: String = "gemini-1.5-flash"
 
-    private let keychain = KeychainManager.shared
     private let validator = APIKeyValidator()
 
     var body: some View {
@@ -673,15 +672,15 @@ struct AIProviderSettingsContent: View {
                 VStack(alignment: .leading, spacing: 16) {
                     // Current API Key Status
                     HStack {
-                        Image(systemName: keychain.hasAPIKey() ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundColor(keychain.hasAPIKey() ? .green : .red)
+                        Image(systemName: !storedAPIKey.isEmpty ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundColor(!storedAPIKey.isEmpty ? .green : .red)
 
-                        Text(keychain.hasAPIKey() ? "API Key Configured" : "No API Key Set")
+                        Text(!storedAPIKey.isEmpty ? "API Key Configured" : "No API Key Set")
                             .font(.system(size: 14, weight: .medium))
 
                         Spacer()
 
-                        if keychain.hasAPIKey() && !isEditing {
+                        if !storedAPIKey.isEmpty && !isEditing {
                             Button("Change Key") {
                                 withAnimation {
                                     isEditing = true
@@ -695,14 +694,14 @@ struct AIProviderSettingsContent: View {
                     }
 
                     // Show current key (masked)
-                    if keychain.hasAPIKey() && !isEditing {
+                    if !storedAPIKey.isEmpty && !isEditing {
                         HStack {
                             Text("Current Key:")
                                 .font(.system(size: 13))
                                 .foregroundColor(.secondary)
 
                             if showAPIKey {
-                                Text(currentAPIKey)
+                                Text(storedAPIKey)
                                     .font(.system(size: 12, design: .monospaced))
                                     .textSelection(.enabled)
                             } else {
@@ -728,9 +727,9 @@ struct AIProviderSettingsContent: View {
                     }
 
                     // Edit API Key Section
-                    if isEditing || !keychain.hasAPIKey() {
+                    if isEditing || storedAPIKey.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(keychain.hasAPIKey() ? "Enter New API Key" : "Configure API Key")
+                            Text(!storedAPIKey.isEmpty ? "Enter New API Key" : "Configure API Key")
                                 .font(.system(size: 13))
                                 .foregroundColor(.secondary)
 
@@ -801,7 +800,7 @@ struct AIProviderSettingsContent: View {
             }
 
             // Model Selection Section
-            if keychain.hasAPIKey() {
+            if !storedAPIKey.isEmpty {
                 SettingsSection(title: "Model Selection") {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -845,7 +844,7 @@ struct AIProviderSettingsContent: View {
             SettingsSection(title: "Tips") {
                 VStack(alignment: .leading, spacing: 8) {
                     TipRow(icon: "lightbulb", text: "Get a free API key from Google AI Studio")
-                    TipRow(icon: "lock.fill", text: "Your API key is stored securely in macOS Keychain")
+                    TipRow(icon: "lock.fill", text: "Your API key is stored locally on your device")
                     TipRow(icon: "bolt.fill", text: "Flash models are faster and more cost-effective")
                     TipRow(icon: "sparkles", text: "Pro models offer better quality for complex tasks")
                 }
@@ -854,7 +853,7 @@ struct AIProviderSettingsContent: View {
             Spacer()
 
             // Danger Zone
-            if keychain.hasAPIKey() {
+            if !storedAPIKey.isEmpty {
                 SettingsSection(title: "Danger Zone") {
                     Button("Remove API Key") {
                         removeAPIKey()
@@ -874,7 +873,7 @@ struct AIProviderSettingsContent: View {
     }
 
     private func loadCurrentKey() {
-        currentAPIKey = keychain.getAPIKey() ?? ""
+        // Already loaded via @AppStorage
     }
 
     private func toggleShowAPIKey() {
@@ -896,25 +895,19 @@ struct AIProviderSettingsContent: View {
                 let (success, _) = await validator.testGeminiConnection(newAPIKey)
 
                 if success {
-                    // Save to Keychain
-                    if keychain.saveAPIKey(newAPIKey) {
-                        // Update UserDefaults for compatibility
-                        UserDefaults.standard.set(newAPIKey, forKey: "gemini_api_key")
+                    // Save to UserDefaults
+                    storedAPIKey = newAPIKey
 
-                        validationMessage = "✅ API key saved successfully!"
-                        currentAPIKey = newAPIKey
-                        isEditing = false
-                        newAPIKey = ""
+                    validationMessage = "✅ API key saved successfully!"
+                    isEditing = false
+                    newAPIKey = ""
 
-                        // Refresh models
-                        await refreshModels()
+                    // Refresh models
+                    await refreshModels()
 
-                        // Clear message after delay
-                        try? await Task.sleep(nanoseconds: 2_000_000_000)
-                        validationMessage = ""
-                    } else {
-                        validationMessage = "❌ Failed to save API key"
-                    }
+                    // Clear message after delay
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    validationMessage = ""
                 } else {
                     validationMessage = "❌ Connection test failed"
                 }
@@ -927,15 +920,13 @@ struct AIProviderSettingsContent: View {
     }
 
     private func refreshModels() async {
-        if let apiKey = keychain.getAPIKey() {
-            availableModels = await validator.getAvailableModels(apiKey)
+        if !storedAPIKey.isEmpty {
+            availableModels = await validator.getAvailableModels(storedAPIKey)
         }
     }
 
     private func removeAPIKey() {
-        _ = keychain.deleteAPIKey()
-        UserDefaults.standard.removeObject(forKey: "gemini_api_key")
-        currentAPIKey = ""
+        storedAPIKey = ""
         newAPIKey = ""
         isEditing = false
         validationMessage = "API key removed"

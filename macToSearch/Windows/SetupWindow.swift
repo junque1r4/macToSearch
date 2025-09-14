@@ -130,7 +130,6 @@ final class SetupCoordinator {
     var onSetupComplete: (() -> Void)?
 
     private let validator = APIKeyValidator()
-    private let keychain = KeychainManager.shared
 
     func nextStep() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -188,22 +187,16 @@ final class SetupCoordinator {
                 validationMessage = "Fetching available models..."
                 availableModels = await validator.getAvailableModels(apiKey)
 
-                // Save to Keychain
-                if keychain.saveAPIKey(apiKey) {
-                    // Also update UserDefaults for compatibility
-                    UserDefaults.standard.set(apiKey, forKey: "gemini_api_key")
-                    UserDefaults.standard.set(selectedModel, forKey: "gemini_model")
+                // Save to UserDefaults
+                UserDefaults.standard.set(apiKey, forKey: "gemini_api_key")
+                UserDefaults.standard.set(selectedModel, forKey: "gemini_model")
 
-                    validationSuccess = true
-                    validationMessage = "✅ API key validated and saved successfully!"
+                validationSuccess = true
+                validationMessage = "✅ API key validated and saved successfully!"
 
-                    // Auto-proceed after a short delay
-                    try? await Task.sleep(nanoseconds: 1_500_000_000)
-                    nextStep()
-                } else {
-                    validationSuccess = false
-                    validationMessage = "❌ Failed to save API key securely"
-                }
+                // Auto-proceed after a short delay
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                nextStep()
             } else {
                 validationSuccess = false
                 validationMessage = "❌ Connection test failed. Please check your API key."
@@ -356,7 +349,7 @@ struct WelcomeStepView: View {
             VStack(alignment: .leading, spacing: 14) {
                 FeatureRow(icon: "sparkles", text: "Powered by Google Gemini AI")
                 FeatureRow(icon: "circle.dashed", text: "Circle to Search anything on screen")
-                FeatureRow(icon: "lock.fill", text: "Your API key is stored securely in Keychain")
+                FeatureRow(icon: "lock.fill", text: "Your API key is stored locally and securely")
                 FeatureRow(icon: "globe", text: "Open source and privacy-focused")
             }
             .padding(.horizontal, 50)
@@ -454,11 +447,11 @@ struct APIKeyStepView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "lock.shield.fill")
                         .font(.system(size: 11))
-                        .foregroundColor(.orange)
+                        .foregroundColor(.blue)
 
-                    Text("macOS will ask for your password to securely store the API key in Keychain")
+                    Text("Your API key will be stored securely on your device")
                         .font(.caption2)
-                        .foregroundColor(.orange)
+                        .foregroundColor(.secondary)
                 }
                 .padding(.top, 4)
             }

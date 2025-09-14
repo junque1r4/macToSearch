@@ -22,14 +22,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     private var captureStream: SCStream?
     private var statusItem: NSStatusItem?
     private var statusMenu: NSMenu?
-    private let keychain = KeychainManager.shared
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Check for one-time migration from UserDefaults to Keychain
-        keychain.migrateFromUserDefaults()
-
         // Check if API key is configured
-        if !keychain.hasAPIKey() {
+        let apiKey = UserDefaults.standard.string(forKey: "gemini_api_key") ?? ""
+        if apiKey.isEmpty {
             // Show setup window for first-time configuration
             showSetupWindow()
         } else {

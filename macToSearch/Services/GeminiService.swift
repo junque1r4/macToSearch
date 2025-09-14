@@ -11,25 +11,25 @@ import SwiftUI
 class GeminiService: ObservableObject {
     private let baseURL = "https://generativelanguage.googleapis.com/v1beta"
     private var apiKey: String = ""
-    private let keychain = KeychainManager.shared
 
+    @AppStorage("gemini_api_key") private var storedAPIKey: String = ""
     @AppStorage("gemini_model") private var selectedModel: String = "gemini-1.5-flash"
 
     init() {
-        // Load API key from Keychain
-        self.apiKey = keychain.getAPIKey() ?? ""
+        // Load API key from UserDefaults
+        self.apiKey = storedAPIKey
     }
     
     func updateAPIKey(_ key: String) {
         self.apiKey = key
-        // Save to Keychain instead of UserDefaults
-        _ = keychain.saveAPIKey(key)
+        // Save to UserDefaults
+        self.storedAPIKey = key
     }
     
     func searchWithText(_ text: String, context: String = "") async throws -> String {
-        // Refresh API key from Keychain in case it was updated
+        // Refresh API key from UserDefaults in case it was updated
         if apiKey.isEmpty {
-            apiKey = keychain.getAPIKey() ?? ""
+            apiKey = storedAPIKey
         }
 
         guard !apiKey.isEmpty else {
@@ -41,9 +41,9 @@ class GeminiService: ObservableObject {
     }
     
     func searchWithHistory(_ messages: [(content: String, image: NSImage?, isUser: Bool)], newText: String, newImage: NSImage? = nil) async throws -> String {
-        // Refresh API key from Keychain in case it was updated
+        // Refresh API key from UserDefaults in case it was updated
         if apiKey.isEmpty {
-            apiKey = keychain.getAPIKey() ?? ""
+            apiKey = storedAPIKey
         }
 
         guard !apiKey.isEmpty else {
@@ -140,9 +140,9 @@ class GeminiService: ObservableObject {
     }
     
     func searchWithImage(_ image: NSImage, text: String = "What's in this image?") async throws -> String {
-        // Refresh API key from Keychain in case it was updated
+        // Refresh API key from UserDefaults in case it was updated
         if apiKey.isEmpty {
-            apiKey = keychain.getAPIKey() ?? ""
+            apiKey = storedAPIKey
         }
 
         guard !apiKey.isEmpty else {

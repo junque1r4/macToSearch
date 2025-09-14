@@ -80,13 +80,6 @@ On first run, macOS will request:
 - **Accessibility**: For global hotkeys to work
 - Configure in: `System Settings > Privacy & Security`
 
-### Security Note: Keychain Access
-
-- **Why Keychain?** macToSearch stores your API key in the macOS Keychain for maximum security
-- **Password Prompt**: When saving or accessing your API key, macOS will ask for your password
-- **This is Normal**: The prompt ensures your API key is encrypted and protected by the system
-- **Tip**: Click "Always Allow" to avoid repeated prompts for macToSearch
-
 ## 🎯 How to Use
 
 ### Quick Visual Search (Circle to Search)
@@ -183,12 +176,12 @@ On first run, macOS will request:
 - **Vision Framework**: OCR with 99.7% accuracy via VNRecognizeTextRequest
 - **Carbon Events API**: Global hotkeys that work in any context
 - **CoreGraphics**: Image manipulation and element detection
-- **Security Framework**: Keychain integration for secure storage
+- **UserDefaults**: Simple and reliable storage for API keys
 
 #### Persistence & State
 - **SwiftData**: Declarative modeling for history
 - **@Observable**: Reactive state with automatic observation
-- **Keychain**: Secure API key storage
+- **UserDefaults**: Local API key storage
 
 ### Project Structure
 
@@ -216,7 +209,6 @@ macToSearch/
 │   ├── ScreenCaptureManager.swift # Capture strategies
 │   ├── OCRManager.swift          # Text extraction pipeline
 │   ├── HotkeyManager.swift       # Global shortcut registration
-│   ├── KeychainManager.swift     # Secure credential storage
 │   └── ElementDetector.swift     # Smart UI detection
 │
 └── 🌐 Services/
@@ -267,7 +259,7 @@ macToSearch/
 - **Local Processing First**: OCR and detection executed on device
 - **No Telemetry**: No usage data is collected
 - **Minimal Communication**: Only AI queries are sent to Gemini
-- **Secure Storage**: API keys stored in Keychain, never in plaintext
+- **Local Storage**: API keys stored locally on your device
 - **Explicit Permissions**: User controls all access
 
 ### Data Transmitted
@@ -277,7 +269,7 @@ macToSearch/
 | Screenshots | ✅ Yes | ❌ No | Processed and discarded |
 | OCR Text | ✅ Yes | ⚠️ Optional | Only if sent to AI |
 | History | ✅ Yes | ❌ No | SwiftData local |
-| API Keys | ✅ Yes | ❌ No | Keychain encryption |
+| API Keys | ✅ Yes | ❌ No | Local storage |
 | AI Queries | ❌ No | ✅ Yes | HTTPS to Gemini |
 
 ## ⚠️ Known Issues & Solutions
