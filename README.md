@@ -78,6 +78,13 @@ On first run, macOS will request:
 - **Accessibility**: For global hotkeys to work
 - Configure in: `System Settings > Privacy & Security`
 
+### Security Note: Keychain Access
+
+- **Why Keychain?** macToSearch stores your API key in the macOS Keychain for maximum security
+- **Password Prompt**: When saving or accessing your API key, macOS will ask for your password
+- **This is Normal**: The prompt ensures your API key is encrypted and protected by the system
+- **Tip**: Click "Always Allow" to avoid repeated prompts for macToSearch
+
 ## 🎯 How to Use
 
 ### Quick Visual Search (Circle to Search)

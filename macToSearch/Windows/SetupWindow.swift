@@ -356,7 +356,7 @@ struct WelcomeStepView: View {
             VStack(alignment: .leading, spacing: 14) {
                 FeatureRow(icon: "sparkles", text: "Powered by Google Gemini AI")
                 FeatureRow(icon: "circle.dashed", text: "Circle to Search anything on screen")
-                FeatureRow(icon: "lock.fill", text: "Your API key is stored securely")
+                FeatureRow(icon: "lock.fill", text: "Your API key is stored securely in Keychain")
                 FeatureRow(icon: "globe", text: "Open source and privacy-focused")
             }
             .padding(.horizontal, 50)
@@ -450,6 +450,17 @@ struct APIKeyStepView: View {
                             )
                     )
                     .focused($isTextFieldFocused)
+
+                HStack(spacing: 4) {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(.orange)
+
+                    Text("macOS will ask for your password to securely store the API key in Keychain")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                }
+                .padding(.top, 4)
             }
             .padding(.horizontal, 40)
 
