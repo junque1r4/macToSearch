@@ -1,207 +1,233 @@
 # macToSearch
 
-**AI-Powered Visual Search for macOS** - Uma aplicação nativa que transforma qualquer coisa na sua tela em uma busca inteligente, similar ao Circle to Search do Google.
+**Open-Source AI-Powered Visual Search for macOS** - A native application that transforms anything on your screen into an intelligent search, similar to Google's Circle to Search.
 
-## 🚀 Visão Geral
+## 🚀 Overview
 
-macToSearch é uma ferramenta revolucionária de busca visual que integra captura de tela avançada, OCR de alta precisão e IA generativa (Gemini) para permitir que você pesquise instantaneamente qualquer coisa visível em sua tela. Com uma interface glassmórfica elegante e atalhos de teclado intuitivos, torna a busca de informações mais rápida e natural que nunca.
+macToSearch is an open-source visual search tool that combines advanced screen capture, high-precision OCR, and generative AI (Google Gemini) to let you instantly search anything visible on your screen. With an elegant glassmorphic interface and intuitive keyboard shortcuts, it makes finding information faster and more natural than ever.
 
-## ✨ Principais Recursos
+## ✨ Key Features
 
-### 🎯 Captura Visual Inteligente
-- **Circle to Search**: Pressione `Cmd+Shift+Space` para ativar o modo de captura instantaneamente
-- **Seleção Flexível**: Desenhe círculos, retângulos ou selecione livremente qualquer área
-- **Detecção Automática de Elementos**: Identifica automaticamente elementos UI, blocos de texto e imagens
-- **OCR de Alta Precisão**: Extrai texto com 99.7% de precisão usando Vision framework nativo
+### 🎯 Intelligent Visual Capture
+- **Circle to Search**: Press `Cmd+Shift+Space` to instantly activate capture mode
+- **Flexible Selection**: Draw circles, rectangles, or freely select any area
+- **Automatic Element Detection**: Intelligently identifies UI elements, text blocks, and images
+- **High-Precision OCR**: Extracts text with 99.7% accuracy using native Vision framework
 
-### 💬 Interface de Chat Flutuante Moderna
-- **Barra de Pesquisa Minimalista**: Interface compacta que não atrapalha seu fluxo de trabalho
-- **Expansão Inteligente**: Expande automaticamente quando você começa a digitar
-- **Histórico de Conversação Contextual**: Mantém contexto entre múltiplas perguntas para respostas mais relevantes
-- **Suporte a Múltiplas Imagens**: Anexe e analise várias imagens simultaneamente com drag & drop
+### 💬 Modern Floating Chat Interface
+- **Minimalist Search Bar**: Compact interface that doesn't disrupt your workflow
+- **Smart Expansion**: Automatically expands when you start typing
+- **Contextual Conversation History**: Maintains context across multiple questions for more relevant answers
+- **Multi-Image Support**: Attach and analyze multiple images simultaneously with drag & drop
 
-### 🎨 Design Glassmórfico de Última Geração
-- **Efeitos Visuais Nativos**: Transparência e blur que se integram perfeitamente ao macOS
-- **Bordas Animadas com Gradiente Neon**: Visual dinâmico com animações suaves
-- **Dark Mode Automático**: Adapta-se instantaneamente ao tema do sistema
-- **Animações com Spring Physics**: Transições naturais e responsivas entre estados
+### 🎨 Cutting-Edge Glassmorphic Design
+- **Native Visual Effects**: Transparency and blur that integrate seamlessly with macOS
+- **Animated Neon Gradient Borders**: Dynamic visuals with smooth animations
+- **Automatic Dark Mode**: Instantly adapts to system theme
+- **Spring Physics Animations**: Natural and responsive transitions between states
 
-### ⚡ Performance e Integração Sistema
-- **IA Generativa Gemini 2.0**: Respostas contextuais ultra-rápidas com modelos de última geração
-- **Processamento Local Híbrido**: OCR executado localmente para máxima privacidade
-- **Atalhos Globais via Carbon API**: Funciona de qualquer aplicativo, mesmo em tela cheia
-- **Menu Bar Integration**: Acesso rápido via ícone nativo na barra de menu
-- **Clipboard Monitoring**: Detecta e processa conteúdo copiado automaticamente
+### ⚡ Performance & System Integration
+- **Google Gemini AI Integration**: Ultra-fast contextual responses with latest generation models
+- **Hybrid Local Processing**: OCR executed locally for maximum privacy
+- **Global Hotkeys via Carbon API**: Works from any application, even in fullscreen
+- **Menu Bar Integration**: Quick access via native menu bar icon
+- **Clipboard Monitoring**: Automatically detects and processes copied content
 
-## 🛠 Instalação e Configuração
+## 🛠 Installation & Setup
 
-### Requisitos do Sistema
-- macOS 14.0 (Sonoma) ou superior
-- Apple Silicon (M1/M2/M3/M4) ou Intel Mac
-- Xcode 15.0+ (para compilação do código-fonte)
-- Conexão com internet para recursos de IA
+### System Requirements
+- macOS 14.0 (Sonoma) or later
+- Apple Silicon (M1/M2/M3/M4) or Intel Mac
+- Xcode 15.0+ (for building from source)
+- Internet connection for AI features
 
-### Instalação via Código-Fonte
+### Getting Started
 
-1. **Clone o repositório**
+#### Option 1: Build from Source (Recommended)
+
+1. **Clone the repository**
 ```bash
 git clone https://github.com/yourusername/macToSearch.git
 cd macToSearch
 ```
 
-2. **Abra no Xcode**
+2. **Open in Xcode**
 ```bash
 open macToSearch.xcodeproj
 ```
 
-3. **Configure a API Key do Gemini**
-   - Obtenha uma key gratuita em [Google AI Studio](https://makersuite.google.com/app/apikey)
-   - Adicione no arquivo `GeminiService.swift` ou via Settings no app
-   - 1.500 requests gratuitos por dia
+3. **Build and Run**
+   - Press `Cmd+R` to build and run
+   - Or use `Product > Archive` to create a release build
 
-4. **Compile e Execute**
-   - Pressione `Cmd+R` para build e run
-   - Ou use `Product > Archive` para criar um release
+4. **Initial Setup**
+   - On first launch, you'll be guided through a setup wizard
+   - You'll need to provide your own Google Gemini API key
+   - Get a free API key at [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - The key is stored securely in macOS Keychain
 
-### Permissões Necessárias
+#### Option 2: Download Pre-built Release
+- Check the [Releases](https://github.com/yourusername/macToSearch/releases) page for pre-built binaries
+- Download, unzip, and drag to Applications folder
+- Run and follow the setup wizard
 
-Na primeira execução, o macOS solicitará:
-- **Screen Recording**: Para capturar conteúdo da tela
-- **Accessibility**: Para atalhos globais funcionarem
-- Configure em: `Ajustes do Sistema > Privacidade e Segurança`
+### Required Permissions
 
-## 🎯 Como Usar
+On first run, macOS will request:
+- **Screen Recording**: To capture screen content
+- **Accessibility**: For global hotkeys to work
+- Configure in: `System Settings > Privacy & Security`
 
-### Busca Visual Rápida (Circle to Search)
+## 🎯 How to Use
 
-1. **Ative o Modo de Captura**
-   - Pressione `Cmd+Shift+Space` de qualquer lugar
-   - Ou clique no ícone da câmera na barra flutuante
+### Quick Visual Search (Circle to Search)
 
-2. **Selecione a Área de Interesse**
-   - **Desenhe**: Circule ou crie retângulos ao redor do conteúdo
-   - **Clique Inteligente**: Selecione elementos UI automaticamente
-   - **Seleção Livre**: Desenhe qualquer forma para captura precisa
-   - **ESC**: Cancele a seleção a qualquer momento
+1. **Activate Capture Mode**
+   - Press `Cmd+Shift+Space` from anywhere
+   - Or click the camera icon in the floating bar
 
-3. **Receba Resultados Instantâneos**
-   - OCR extrai texto automaticamente
-   - IA analisa contexto e fornece informações relevantes
-   - Continue a conversa para aprofundar o tópico
+2. **Select Area of Interest**
+   - **Draw**: Circle or create rectangles around content
+   - **Smart Click**: Automatically select UI elements
+   - **Free Selection**: Draw any shape for precise capture
+   - **ESC**: Cancel selection at any time
 
-### Chat com IA Contextual
+3. **Get Instant Results**
+   - OCR automatically extracts text
+   - AI analyzes context and provides relevant information
+   - Continue the conversation to dive deeper into the topic
 
-1. **Abra a Interface de Chat**
-   - Pressione `Cmd+Shift+O` para abrir/focar
-   - Ou clique na barra de pesquisa flutuante
+### Contextual AI Chat
 
-2. **Interaja Naturalmente**
-   - Digite perguntas em linguagem natural
-   - Arraste imagens diretamente para análise
-   - Use `Cmd+V` para colar imagens do clipboard
-   - Histórico mantém contexto entre perguntas
+1. **Open Chat Interface**
+   - Press `Cmd+Shift+O` to open/focus
+   - Or click the floating search bar
 
-### Pesquisa de Clipboard
+2. **Interact Naturally**
+   - Type questions in natural language
+   - Drag images directly for analysis
+   - Use `Cmd+V` to paste images from clipboard
+   - History maintains context between questions
 
-1. **Copie Qualquer Conteúdo**
-   - Texto, imagens ou combinações
+### Clipboard Search
 
-2. **Ative a Pesquisa**
-   - App detecta automaticamente novo conteúdo
-   - Ou clique em "Search Clipboard"
+1. **Copy Any Content**
+   - Text, images, or combinations
 
-### ⌨️ Atalhos de Teclado
+2. **Activate Search**
+   - App automatically detects new content
+   - Or click "Search Clipboard"
 
-| Atalho | Ação | Contexto |
-|--------|------|----------|
-| `Cmd+Shift+Space` | Ativar Circle to Search | Global |
-| `Cmd+Shift+O` | Abrir/Focar Chat | Global |
-| `ESC` | Fechar overlay ou chat | Durante captura/chat |
-| `Return` | Enviar mensagem | No chat |
-| `Cmd+V` | Colar imagem | No chat |
-| `Cmd+,` | Abrir Preferências | No app |
+### ⌨️ Keyboard Shortcuts
 
-## 🤖 Modelos de IA e Limites
+| Shortcut | Action | Context |
+|----------|--------|---------|
+| `Cmd+Shift+Space` | Activate Circle to Search | Global |
+| `Cmd+Shift+O` | Open/Focus Chat | Global |
+| `ESC` | Close overlay or chat | During capture/chat |
+| `Return` | Send message | In chat |
+| `Cmd+V` | Paste image | In chat |
+| `Cmd+Shift+S` | Open Settings | Global |
 
-### Plano Gratuito do Gemini
-- **1.500 requisições/dia**: Suficiente para uso pessoal intenso
-- **Sem custo**: Tokens de entrada/saída gratuitos
-- **Rate limit**: 15 RPM (requests por minuto)
-- **Contexto**: Até 1M tokens por conversa
+## 🤖 AI Models & Configuration
 
-### Modelos Disponíveis
+### Setting Up Your API Key
 
-| Modelo | Velocidade | Capacidade | Melhor Para |
-|--------|------------|------------|-------------|
-| **gemini-2.0-flash-exp** | ⚡⚡⚡⚡⚡ | Última geração com reasoning | Análises complexas |
-| **gemini-1.5-flash** | ⚡⚡⚡⚡ | Balanceado | Uso geral (recomendado) |
-| **gemini-1.5-flash-8b** | ⚡⚡⚡⚡⚡ | Leve | Respostas simples |
-| **gemini-1.5-pro** | ⚡⚡ | Máxima precisão | Tarefas complexas |
+1. **Get a Free API Key**
+   - Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - Sign in with your Google account
+   - Click "Create API Key"
+   - Copy the generated key
 
-## 🏗 Arquitetura e Tecnologias
+2. **Configure in macToSearch**
+   - The setup wizard will appear on first launch
+   - Paste your API key when prompted
+   - The key is validated and stored securely in Keychain
+   - You can change it later in Settings
 
-### Stack Tecnológico
+### Available Models
 
-#### Linguagem e Frameworks
-- **Swift 5.9+**: Linguagem principal com async/await e actors
-- **SwiftUI**: Interface declarativa com @Observable e property wrappers
-- **AppKit**: Integração com sistema para janelas customizadas
+| Model | Speed | Capability | Best For |
+|-------|-------|------------|----------|
+| **gemini-2.0-flash-exp** | ⚡⚡⚡⚡⚡ | Latest generation with reasoning | Complex analyses |
+| **gemini-1.5-flash** | ⚡⚡⚡⚡ | Balanced | General use (recommended) |
+| **gemini-1.5-flash-8b** | ⚡⚡⚡⚡⚡ | Lightweight | Simple responses |
+| **gemini-1.5-pro** | ⚡⚡ | Maximum precision | Complex tasks |
 
-#### APIs do Sistema
-- **ScreenCaptureKit**: Captura moderna e eficiente de tela
-- **Vision Framework**: OCR com 99.7% de precisão via VNRecognizeTextRequest
-- **Carbon Events API**: Hotkeys globais que funcionam em qualquer contexto
-- **CoreGraphics**: Manipulação de imagens e detecção de elementos
+### API Limits (Free Tier)
+- **1,500 requests/day**: Sufficient for intensive personal use
+- **No cost**: Free input/output tokens
+- **Rate limit**: 15 RPM (requests per minute)
+- **Context**: Up to 1M tokens per conversation
 
-#### Persistência e Estado
-- **SwiftData**: Modelagem declarativa para histórico
-- **@Observable**: Estado reativo com observação automática
-- **UserDefaults**: Configurações e preferências seguras
+## 🏗 Architecture & Technologies
 
-### Estrutura do Projeto
+### Technology Stack
+
+#### Language & Frameworks
+- **Swift 5.9+**: Primary language with async/await and actors
+- **SwiftUI**: Declarative UI with @Observable and property wrappers
+- **AppKit**: System integration for custom windows
+
+#### System APIs
+- **ScreenCaptureKit**: Modern and efficient screen capture
+- **Vision Framework**: OCR with 99.7% accuracy via VNRecognizeTextRequest
+- **Carbon Events API**: Global hotkeys that work in any context
+- **CoreGraphics**: Image manipulation and element detection
+- **Security Framework**: Keychain integration for secure storage
+
+#### Persistence & State
+- **SwiftData**: Declarative modeling for history
+- **@Observable**: Reactive state with automatic observation
+- **Keychain**: Secure API key storage
+
+### Project Structure
 
 ```
 macToSearch/
 ├── 🎯 Core/
-│   ├── macToSearchApp.swift      # Entry point com @main
-│   ├── AppDelegate.swift         # Coordenador de janelas e eventos
+│   ├── macToSearchApp.swift      # Entry point with @main
+│   ├── AppDelegate.swift         # Window and event coordinator
 │   └── Models/
-│       ├── AppState.swift        # Estado global observável
-│       └── DrawingPath.swift     # Geometria de seleção
+│       ├── AppState.swift        # Observable global state
+│       └── DrawingPath.swift     # Selection geometry
 │
 ├── 🪟 Windows/
-│   ├── OverlayWindow.swift       # Janela fullscreen para captura
-│   └── FloatingSearchWindow.swift # Barra flutuante glassmórfica
+│   ├── OverlayWindow.swift       # Fullscreen capture window
+│   ├── FloatingSearchWindow.swift # Glassmorphic floating bar
+│   └── SetupWindow.swift         # Initial setup wizard
 │
 ├── 🎨 Views/
-│   ├── DrawingOverlayView.swift  # Canvas de seleção interativo
-│   ├── MinimalChatBubble.swift   # Componentes de chat
-│   ├── ImagePreviewBar.swift     # Galeria de imagens anexadas
-│   └── MarkdownTextView.swift    # Renderização rica de texto
+│   ├── DrawingOverlayView.swift  # Interactive selection canvas
+│   ├── MinimalChatBubble.swift   # Chat components
+│   ├── ImagePreviewBar.swift     # Attached images gallery
+│   └── MarkdownTextView.swift    # Rich text rendering
 │
 ├── 🔧 Managers/
-│   ├── ScreenCaptureManager.swift # Estratégias de captura
-│   ├── OCRManager.swift          # Pipeline de extração de texto
-│   ├── HotkeyManager.swift       # Registro de atalhos globais
-│   └── ElementDetector.swift     # Detecção inteligente de UI
+│   ├── ScreenCaptureManager.swift # Capture strategies
+│   ├── OCRManager.swift          # Text extraction pipeline
+│   ├── HotkeyManager.swift       # Global shortcut registration
+│   ├── KeychainManager.swift     # Secure credential storage
+│   └── ElementDetector.swift     # Smart UI detection
 │
 └── 🌐 Services/
-    └── GeminiService.swift       # Cliente API com retry e cache
+    ├── GeminiService.swift       # API client with retry and cache
+    └── APIKeyValidator.swift     # Key validation and testing
 ```
 
-### Padrões de Arquitetura
+### Architecture Patterns
 
-- **MVVM com Coordinators**: Views declarativas + ViewModels observáveis
-- **Repository Pattern**: Serviços isolados e testáveis
-- **State Management**: Single source of truth com AppState
-- **Protocol-Oriented**: Abstrações para flexibilidade
+- **MVVM with Coordinators**: Declarative Views + Observable ViewModels
+- **Repository Pattern**: Isolated and testable services
+- **State Management**: Single source of truth with AppState
+- **Protocol-Oriented**: Abstractions for flexibility
 
 ## 🎨 Design System
 
 ### Glassmorphism Implementation
 
 ```swift
-// Material effects nativos do macOS
+// Native macOS material effects
 .background(.ultraThinMaterial)
 .background(Color.gray.opacity(0.3))
 .blur(radius: 20)
@@ -217,159 +243,187 @@ macToSearch/
 )
 ```
 
-### Princípios de Design
+### Design Principles
 
-1. **Clareza através da Transparência**: Contexto sempre visível
-2. **Hierarquia Visual**: Blur progressivo para profundidade
-3. **Movimento Natural**: Spring animations com damping realista
-4. **Cores Vibrantes**: Gradientes animados para feedback visual
-5. **Minimalismo Funcional**: Cada elemento tem propósito claro
+1. **Clarity through Transparency**: Context always visible
+2. **Visual Hierarchy**: Progressive blur for depth
+3. **Natural Movement**: Spring animations with realistic damping
+4. **Vibrant Colors**: Animated gradients for visual feedback
+5. **Functional Minimalism**: Every element has a clear purpose
 
-## 🔒 Privacidade e Segurança
+## 🔒 Privacy & Security
 
-### Princípios de Privacidade
+### Privacy Principles
 
-- **Processamento Local Primeiro**: OCR e detecção executados no dispositivo
-- **Sem Telemetria**: Nenhum dado de uso é coletado
-- **Comunicação Mínima**: Apenas queries de IA são enviadas para Gemini
-- **Armazenamento Seguro**: API keys no Keychain, não em plaintext
-- **Permissões Explícitas**: Usuário controla todos os acessos
+- **Local Processing First**: OCR and detection executed on device
+- **No Telemetry**: No usage data is collected
+- **Minimal Communication**: Only AI queries are sent to Gemini
+- **Secure Storage**: API keys stored in Keychain, never in plaintext
+- **Explicit Permissions**: User controls all access
 
-### Dados Transmitidos
+### Data Transmitted
 
-| Tipo | Local | Remoto | Notas |
+| Type | Local | Remote | Notes |
 |------|-------|--------|-------|
-| Screenshots | ✅ Sim | ❌ Não | Processados e descartados |
-| Texto OCR | ✅ Sim | ⚠️ Opcional | Apenas se enviado para IA |
-| Histórico | ✅ Sim | ❌ Não | SwiftData local |
-| API Keys | ✅ Sim | ❌ Não | Keychain encryption |
-| Queries IA | ❌ Não | ✅ Sim | HTTPS para Gemini |
+| Screenshots | ✅ Yes | ❌ No | Processed and discarded |
+| OCR Text | ✅ Yes | ⚠️ Optional | Only if sent to AI |
+| History | ✅ Yes | ❌ No | SwiftData local |
+| API Keys | ✅ Yes | ❌ No | Keychain encryption |
+| AI Queries | ❌ No | ✅ Yes | HTTPS to Gemini |
 
-## ⚠️ Problemas Conhecidos e Soluções
+## ⚠️ Known Issues & Solutions
 
-### Captura de Tela
+### Screen Capture
 
-**Problema**: Apenas wallpaper capturado, sem aplicações
-- **Causa**: Permissões de Screen Recording incompletas
-- **Solução**: 
-  1. Abra `Ajustes > Privacidade > Gravação de Tela`
-  2. Remova e re-adicione macToSearch
-  3. Reinicie o app
+**Issue**: Only wallpaper captured, no applications
+- **Cause**: Incomplete Screen Recording permissions
+- **Solution**:
+  1. Open `Settings > Privacy > Screen Recording`
+  2. Remove and re-add macToSearch
+  3. Restart the app
 
-**Problema**: macOS Sequoia requer re-aprovação mensal
-- **Causa**: Nova política de segurança da Apple
-- **Solução**: Aceite o prompt mensal ou compile localmente
+**Issue**: macOS Sequoia requires monthly re-approval
+- **Cause**: New Apple security policy
+- **Solution**: Accept the monthly prompt or build locally
 
 ### Performance
 
-**Problema**: Delay na primeira captura
-- **Causa**: Inicialização do ScreenCaptureKit
-- **Solução**: Framework é pré-carregado após primeiro uso
+**Issue**: Delay on first capture
+- **Cause**: ScreenCaptureKit initialization
+- **Solution**: Framework is pre-loaded after first use
 
-**Problema**: OCR lento em imagens grandes
-- **Causa**: Processamento síncrono de alta resolução
-- **Solução**: Redimensionamento automático implementado
+**Issue**: Slow OCR on large images
+- **Cause**: Synchronous high-resolution processing
+- **Solution**: Automatic resizing implemented
 
-### Compatibilidade
+### Compatibility
 
-**Problema**: Hotkeys não funcionam em alguns apps
-- **Causa**: Apps com captura exclusiva de teclado
-- **Solução**: Use o ícone do menu bar como alternativa
+**Issue**: Hotkeys don't work in some apps
+- **Cause**: Apps with exclusive keyboard capture
+- **Solution**: Use menu bar icon as alternative
 
-## 🚀 Roadmap de Desenvolvimento
+## 🚀 Development Roadmap
 
-### v1.1 - Multi-Monitor & Cloud (Q1 2025)
-- [ ] Suporte completo para múltiplos monitores
-- [ ] Sincronização de histórico via iCloud
-- [ ] Tradução automática inline
-- [ ] Export para Markdown/PDF
+### v1.1 - Multi-Monitor & Cloud
+- [ ] Full multi-monitor support
+- [ ] iCloud history sync
+- [ ] Inline automatic translation
+- [ ] Export to Markdown/PDF
 
-### v1.2 - AI Models & Offline (Q2 2025)
-- [ ] Integração com GPT-4, Claude 3.5
-- [ ] Modo offline com Llama 3.2
-- [ ] Plugins para apps específicos (Xcode, Figma)
-- [ ] API para extensões de terceiros
+### v1.2 - AI Models & Offline
+- [ ] Integration with GPT-4, Claude 3.5
+- [ ] Offline mode with Llama 3.2
+- [ ] App-specific plugins (Xcode, Figma)
+- [ ] Third-party extension API
 
-### v2.0 - Intelligence Platform (Q3 2025)
-- [ ] Agentes autônomos para tarefas
-- [ ] RAG com documentos locais
-- [ ] Integração com Apple Intelligence
-- [ ] Modo colaborativo em equipe
+### v2.0 - Intelligence Platform
+- [ ] Autonomous task agents
+- [ ] RAG with local documents
+- [ ] Apple Intelligence integration
+- [ ] Team collaboration mode
 
-## 🤝 Contribuindo
+## 🤝 Contributing
 
-Contribuições são muito bem-vindas! Veja como participar:
+We welcome contributions! Here's how to get involved:
 
-### Setup de Desenvolvimento
+### Development Setup
 
 ```bash
-# Clone e configure
+# Clone and configure
 git clone https://github.com/yourusername/macToSearch.git
 cd macToSearch
 
-# Instale SwiftLint (opcional mas recomendado)
+# Install SwiftLint (optional but recommended)
 brew install swiftlint
 
-# Abra no Xcode
+# Open in Xcode
 open macToSearch.xcodeproj
 ```
 
-### Processo de Contribuição
+### Contribution Process
 
-1. **Fork** o projeto
+1. **Fork** the project
 2. **Feature Branch** (`git checkout -b feature/AmazingFeature`)
-3. **Commit** com mensagens descritivas
-4. **Push** para sua branch
-5. **Pull Request** com descrição detalhada
+3. **Commit** with descriptive messages
+4. **Push** to your branch
+5. **Pull Request** with detailed description
 
-### Código de Conduta
+### Code Standards
 
-- Use Swift idiomático e SwiftUI moderno
-- Mantenha cobertura de testes > 70%
-- Documente APIs públicas
-- Siga o design system existente
+- Use idiomatic Swift and modern SwiftUI
+- Maintain test coverage > 70%
+- Document public APIs
+- Follow existing design system
+- Ensure API keys are never committed
 
-## 📚 Recursos e Documentação
+### Ways to Contribute
 
-### Links Úteis
-- [Documentação do Gemini API](https://ai.google.dev/docs)
+- 🐛 Report bugs and issues
+- 💡 Suggest new features
+- 📝 Improve documentation
+- 🌐 Add translations
+- 🎨 Enhance UI/UX
+- 🧪 Write tests
+- 🔧 Optimize performance
+
+## 📚 Resources & Documentation
+
+### Useful Links
+- [Gemini API Documentation](https://ai.google.dev/docs)
 - [ScreenCaptureKit Guide](https://developer.apple.com/documentation/screencapturekit)
 - [Vision Framework](https://developer.apple.com/documentation/vision)
 - [SwiftUI by Example](https://www.hackingwithswift.com/quick-start/swiftui)
 
-### Projetos Relacionados
+### Related Projects
 - [Circle to Search (Google)](https://blog.google/products/search/circle-to-search-android/)
 - [Screenshot to Code](https://github.com/abi/screenshot-to-code)
 - [Codeshot](https://github.com/PolybrainAI/codeshot)
 
-## 📄 Licença
+## 📄 License
 
-Este projeto está licenciado sob a **MIT License** - veja [LICENSE](LICENSE) para detalhes.
+This project is licensed under the **MIT License** - see [LICENSE](LICENSE) for details.
 
 ```
 MIT License
 Copyright (c) 2025 macToSearch Contributors
 
-Permission is hereby granted, free of charge...
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
-## 🙏 Agradecimentos
+## 🙏 Acknowledgments
 
-- **Google** pela API Gemini e inspiração do Circle to Search
-- **Apple** pelas poderosas APIs nativas do macOS
-- **Comunidade Swift** pelo suporte e feedback
-- **Você** por usar e apoiar o projeto!
+- **Google** for the Gemini API and Circle to Search inspiration
+- **Apple** for powerful native macOS APIs
+- **Swift Community** for support and feedback
+- **Contributors** for making this project better
+- **You** for using and supporting the project!
 
 ---
 
 <div align="center">
 
-**Desenvolvido com SwiftUI e IA** 🚀
+**Built with SwiftUI and AI** 🚀
 
-Transformando a maneira como você busca informações no macOS
+Transforming how you search for information on macOS
 
-[Reportar Bug](https://github.com/yourusername/macToSearch/issues) • 
-[Solicitar Feature](https://github.com/yourusername/macToSearch/issues) • 
-[Discussões](https://github.com/yourusername/macToSearch/discussions)
+[Report Bug](https://github.com/yourusername/macToSearch/issues) •
+[Request Feature](https://github.com/yourusername/macToSearch/issues) •
+[Discussions](https://github.com/yourusername/macToSearch/discussions)
 
 </div>

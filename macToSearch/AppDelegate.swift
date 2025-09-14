@@ -14,6 +14,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     var overlayWindow: OverlayWindow?
     var floatingSearchWindow: FloatingSearchWindow?
     var settingsWindow: SettingsWindow?
+    var setupWindow: SetupWindow?
     var mainWindow: NSWindow?
     var appState: AppState?
     var hotkeyManager: HotkeyManager?
@@ -21,22 +22,47 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     private var captureStream: SCStream?
     private var statusItem: NSStatusItem?
     private var statusMenu: NSMenu?
+    private let keychain = KeychainManager.shared
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Check for one-time migration from UserDefaults to Keychain
+        keychain.migrateFromUserDefaults()
+
+        // Check if API key is configured
+        if !keychain.hasAPIKey() {
+            // Show setup window for first-time configuration
+            showSetupWindow()
+        } else {
+            // Normal app initialization
+            initializeApp()
+        }
+    }
+
+    private func initializeApp() {
         // Setup floating search window
         setupFloatingSearchWindow()
-        
+
         // Setup overlay window
         overlayWindow = OverlayWindow()
-        
+
         // Setup hotkey callbacks
         setupHotkeyCallback()
-        
+
         // Setup menu bar icon
         setupMenuBarIcon()
-        
+
         // Hide main window if it exists
         hideMainWindow()
+    }
+
+    private func showSetupWindow() {
+        setupWindow = SetupWindow()
+        setupWindow?.onSetupComplete = { [weak self] in
+            // Initialize app after setup is complete
+            self?.initializeApp()
+            self?.setupWindow = nil
+        }
+        setupWindow?.showSetup(animated: true)
     }
     
     func applicationDidBecomeActive(_ notification: Notification) {

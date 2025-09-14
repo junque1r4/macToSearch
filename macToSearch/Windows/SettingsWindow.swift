@@ -408,11 +408,15 @@ struct GeneralSettingsContent: View {
     @AppStorage("play_sounds") private var playSounds = true
     @AppStorage("show_notifications") private var showNotifications = true
     @AppStorage("keep_on_top") private var keepOnTop = false
+    @AppStorage("app_language") private var appLanguage = "System Default"
+    
+    // Hotkey settings from HotkeyManager
+    @AppStorage("hotkey_enabled") private var captureHotkeyEnabled = true
+    @AppStorage("chat_hotkey_enabled") private var chatHotkeyEnabled = true
     
     @State private var captureHotkey = "⌘⇧Space"
     @State private var clearHotkey = "⌘K"
     @State private var isRecordingHotkey = false
-    @State private var showSaveSuccess = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -454,7 +458,7 @@ struct GeneralSettingsContent: View {
             // Language Section
             SettingsSection(title: "Language") {
                 GlassDropdown(
-                    selection: .constant("System Default"),
+                    selection: $appLanguage,
                     options: ["System Default", "English", "Português", "Español"]
                 )
             }
@@ -467,40 +471,34 @@ struct GeneralSettingsContent: View {
                     title: "Reset to Defaults",
                     style: .secondary,
                     action: {
-                        // Reset action
+                        resetToDefaults()
                     }
                 )
                 
                 Spacer()
                 
-                GlassButton(
-                    title: "Save",
-                    style: .primary,
-                    action: {
-                        withAnimation {
-                            showSaveSuccess = true
-                        }
-                        
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            withAnimation {
-                                showSaveSuccess = false
-                            }
-                        }
-                    }
-                )
-            }
-            
-            if showSaveSuccess {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("Settings saved successfully")
-                        .font(.caption)
-                        .foregroundColor(.green)
-                }
-                .transition(.scale.combined(with: .opacity))
+                Text("Settings save automatically")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
         }
+    }
+    
+    private func resetToDefaults() {
+        // Reset all settings to their default values
+        launchAtLogin = false
+        showInMenuBar = true
+        startMinimized = false
+        playSounds = true
+        showNotifications = true
+        keepOnTop = false
+        appLanguage = "System Default"
+        captureHotkeyEnabled = true
+        chatHotkeyEnabled = true
+        
+        // Reset hotkey displays
+        captureHotkey = "⌘⇧Space"
+        clearHotkey = "⌘K"
     }
 }
 
@@ -656,9 +654,317 @@ struct AppearanceSettingsContent: View {
 }
 
 struct AIProviderSettingsContent: View {
+    @State private var currentAPIKey: String = ""
+    @State private var newAPIKey: String = ""
+    @State private var isValidating: Bool = false
+    @State private var validationMessage: String = ""
+    @State private var showAPIKey: Bool = false
+    @State private var isEditing: Bool = false
+    @State private var availableModels: [String] = []
+    @AppStorage("gemini_model") private var selectedModel: String = "gemini-1.5-flash"
+
+    private let keychain = KeychainManager.shared
+    private let validator = APIKeyValidator()
+
     var body: some View {
-        Text("AI Provider settings coming soon...")
-            .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 24) {
+            // API Configuration Section
+            SettingsSection(title: "Google Gemini API") {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Current API Key Status
+                    HStack {
+                        Image(systemName: keychain.hasAPIKey() ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundColor(keychain.hasAPIKey() ? .green : .red)
+
+                        Text(keychain.hasAPIKey() ? "API Key Configured" : "No API Key Set")
+                            .font(.system(size: 14, weight: .medium))
+
+                        Spacer()
+
+                        if keychain.hasAPIKey() && !isEditing {
+                            Button("Change Key") {
+                                withAnimation {
+                                    isEditing = true
+                                    newAPIKey = ""
+                                }
+                            }
+                            .font(.system(size: 12))
+                            .buttonStyle(.plain)
+                            .foregroundColor(.blue)
+                        }
+                    }
+
+                    // Show current key (masked)
+                    if keychain.hasAPIKey() && !isEditing {
+                        HStack {
+                            Text("Current Key:")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+
+                            if showAPIKey {
+                                Text(currentAPIKey)
+                                    .font(.system(size: 12, design: .monospaced))
+                                    .textSelection(.enabled)
+                            } else {
+                                Text("••••••••••••••••••••")
+                                    .font(.system(size: 12, design: .monospaced))
+                            }
+
+                            Button(action: toggleShowAPIKey) {
+                                Image(systemName: showAPIKey ? "eye.slash" : "eye")
+                                    .font(.system(size: 12))
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundColor(.blue)
+
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.gray.opacity(0.1))
+                        )
+                    }
+
+                    // Edit API Key Section
+                    if isEditing || !keychain.hasAPIKey() {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(keychain.hasAPIKey() ? "Enter New API Key" : "Configure API Key")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+
+                            SecureField("Gemini API Key", text: $newAPIKey)
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 13, design: .monospaced))
+                                .padding(10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.gray.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.blue.opacity(0.5), lineWidth: 1)
+                                        )
+                                )
+
+                            HStack {
+                                Button("Get API Key") {
+                                    openGeminiWebsite()
+                                }
+                                .font(.system(size: 12))
+                                .buttonStyle(.plain)
+                                .foregroundColor(.blue)
+
+                                Spacer()
+
+                                if isEditing {
+                                    Button("Cancel") {
+                                        withAnimation {
+                                            isEditing = false
+                                            newAPIKey = ""
+                                            validationMessage = ""
+                                        }
+                                    }
+                                    .font(.system(size: 12))
+                                    .buttonStyle(.plain)
+                                    .foregroundColor(.secondary)
+                                }
+
+                                Button(action: validateAndSaveKey) {
+                                    if isValidating {
+                                        ProgressView()
+                                            .scaleEffect(0.7)
+                                    } else {
+                                        Text("Validate & Save")
+                                            .font(.system(size: 12))
+                                    }
+                                }
+                                .disabled(newAPIKey.isEmpty || isValidating)
+                                .buttonStyle(.plain)
+                                .foregroundColor(newAPIKey.isEmpty ? .gray : .white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(newAPIKey.isEmpty ? Color.gray.opacity(0.3) : Color.blue)
+                                )
+                            }
+
+                            if !validationMessage.isEmpty {
+                                Text(validationMessage)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(validationMessage.contains("✅") ? .green : .red)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Model Selection Section
+            if keychain.hasAPIKey() {
+                SettingsSection(title: "Model Selection") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Preferred Model:")
+                                .font(.system(size: 14))
+                                .frame(width: 120, alignment: .leading)
+
+                            Picker(selection: $selectedModel, label: EmptyView()) {
+                                // Default models
+                                Text("gemini-1.5-flash").tag("gemini-1.5-flash")
+                                Text("gemini-1.5-flash-8b").tag("gemini-1.5-flash-8b")
+                                Text("gemini-1.5-pro").tag("gemini-1.5-pro")
+                                Text("gemini-2.0-flash-exp").tag("gemini-2.0-flash-exp")
+
+                                if !availableModels.isEmpty {
+                                    Divider()
+                                    ForEach(availableModels.filter { model in
+                                        !["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-2.0-flash-exp"].contains(model)
+                                    }, id: \.self) { model in
+                                        Text(model).tag(model)
+                                    }
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 200)
+                        }
+
+                        Button("Refresh Available Models") {
+                            Task {
+                                await refreshModels()
+                            }
+                        }
+                        .font(.system(size: 12))
+                        .buttonStyle(.plain)
+                        .foregroundColor(.blue)
+                    }
+                }
+            }
+
+            // API Usage Tips
+            SettingsSection(title: "Tips") {
+                VStack(alignment: .leading, spacing: 8) {
+                    TipRow(icon: "lightbulb", text: "Get a free API key from Google AI Studio")
+                    TipRow(icon: "lock.fill", text: "Your API key is stored securely in macOS Keychain")
+                    TipRow(icon: "bolt.fill", text: "Flash models are faster and more cost-effective")
+                    TipRow(icon: "sparkles", text: "Pro models offer better quality for complex tasks")
+                }
+            }
+
+            Spacer()
+
+            // Danger Zone
+            if keychain.hasAPIKey() {
+                SettingsSection(title: "Danger Zone") {
+                    Button("Remove API Key") {
+                        removeAPIKey()
+                    }
+                    .font(.system(size: 12))
+                    .foregroundColor(.red)
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .onAppear {
+            loadCurrentKey()
+            Task {
+                await refreshModels()
+            }
+        }
+    }
+
+    private func loadCurrentKey() {
+        currentAPIKey = keychain.getAPIKey() ?? ""
+    }
+
+    private func toggleShowAPIKey() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showAPIKey.toggle()
+        }
+    }
+
+    private func validateAndSaveKey() {
+        Task { @MainActor in
+            isValidating = true
+            validationMessage = "Validating API key..."
+
+            let (isValid, message) = await validator.validateGeminiKey(newAPIKey)
+
+            if isValid {
+                // Test connection
+                validationMessage = "Testing connection..."
+                let (success, _) = await validator.testGeminiConnection(newAPIKey)
+
+                if success {
+                    // Save to Keychain
+                    if keychain.saveAPIKey(newAPIKey) {
+                        // Update UserDefaults for compatibility
+                        UserDefaults.standard.set(newAPIKey, forKey: "gemini_api_key")
+
+                        validationMessage = "✅ API key saved successfully!"
+                        currentAPIKey = newAPIKey
+                        isEditing = false
+                        newAPIKey = ""
+
+                        // Refresh models
+                        await refreshModels()
+
+                        // Clear message after delay
+                        try? await Task.sleep(nanoseconds: 2_000_000_000)
+                        validationMessage = ""
+                    } else {
+                        validationMessage = "❌ Failed to save API key"
+                    }
+                } else {
+                    validationMessage = "❌ Connection test failed"
+                }
+            } else {
+                validationMessage = "❌ \(message)"
+            }
+
+            isValidating = false
+        }
+    }
+
+    private func refreshModels() async {
+        if let apiKey = keychain.getAPIKey() {
+            availableModels = await validator.getAvailableModels(apiKey)
+        }
+    }
+
+    private func removeAPIKey() {
+        _ = keychain.deleteAPIKey()
+        UserDefaults.standard.removeObject(forKey: "gemini_api_key")
+        currentAPIKey = ""
+        newAPIKey = ""
+        isEditing = false
+        validationMessage = "API key removed"
+    }
+
+    private func openGeminiWebsite() {
+        if let url = URL(string: "https://makersuite.google.com/app/apikey") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+}
+
+struct TipRow: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundColor(.blue)
+                .frame(width: 20)
+
+            Text(text)
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+
+            Spacer()
+        }
     }
 }
 

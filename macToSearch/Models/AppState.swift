@@ -18,7 +18,7 @@ class AppState: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    @AppStorage("gemini_api_key") var geminiAPIKey: String = "AIzaSyAnLZaK-pCQOqlNfvF_WX3S8ZbmXaT7BfA"
+    @AppStorage("gemini_api_key") var geminiAPIKey: String = ""
     @AppStorage("gemini_model") var preferredModel: String = "gemini-1.5-flash"
     @AppStorage("use_local_ai") var useLocalAI: Bool = false
     

@@ -11,20 +11,27 @@ import SwiftUI
 class GeminiService: ObservableObject {
     private let baseURL = "https://generativelanguage.googleapis.com/v1beta"
     private var apiKey: String = ""
-    
-    @AppStorage("gemini_api_key") private var storedAPIKey: String = "AIzaSyAnLZaK-pCQOqlNfvF_WX3S8ZbmXaT7BfA"
+    private let keychain = KeychainManager.shared
+
     @AppStorage("gemini_model") private var selectedModel: String = "gemini-1.5-flash"
-    
+
     init() {
-        self.apiKey = storedAPIKey.isEmpty ? "AIzaSyAnLZaK-pCQOqlNfvF_WX3S8ZbmXaT7BfA" : storedAPIKey
+        // Load API key from Keychain
+        self.apiKey = keychain.getAPIKey() ?? ""
     }
     
     func updateAPIKey(_ key: String) {
         self.apiKey = key
-        self.storedAPIKey = key
+        // Save to Keychain instead of UserDefaults
+        _ = keychain.saveAPIKey(key)
     }
     
     func searchWithText(_ text: String, context: String = "") async throws -> String {
+        // Refresh API key from Keychain in case it was updated
+        if apiKey.isEmpty {
+            apiKey = keychain.getAPIKey() ?? ""
+        }
+
         guard !apiKey.isEmpty else {
             throw GeminiError.missingAPIKey
         }
@@ -34,6 +41,11 @@ class GeminiService: ObservableObject {
     }
     
     func searchWithHistory(_ messages: [(content: String, image: NSImage?, isUser: Bool)], newText: String, newImage: NSImage? = nil) async throws -> String {
+        // Refresh API key from Keychain in case it was updated
+        if apiKey.isEmpty {
+            apiKey = keychain.getAPIKey() ?? ""
+        }
+
         guard !apiKey.isEmpty else {
             throw GeminiError.missingAPIKey
         }
@@ -128,6 +140,11 @@ class GeminiService: ObservableObject {
     }
     
     func searchWithImage(_ image: NSImage, text: String = "What's in this image?") async throws -> String {
+        // Refresh API key from Keychain in case it was updated
+        if apiKey.isEmpty {
+            apiKey = keychain.getAPIKey() ?? ""
+        }
+
         guard !apiKey.isEmpty else {
             throw GeminiError.missingAPIKey
         }
@@ -368,7 +385,7 @@ enum GeminiError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingAPIKey:
-            return "Gemini API key is missing. Please add it in Settings."
+            return "Gemini API key is missing. Please configure it in Settings or restart the app for initial setup."
         case .invalidResponse:
             return "Invalid response from Gemini API"
         case .requestFailed(let statusCode):
