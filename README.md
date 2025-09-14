@@ -4,6 +4,8 @@
 
 ## 🚀 Overview
 
+<img width="992" height="689" alt="image" src="https://github.com/user-attachments/assets/1de4bcb3-7817-4d70-adbd-fd62d29e1814" />
+
 macToSearch is an open-source visual search tool that combines advanced screen capture, high-precision OCR, and generative AI (Google Gemini) to let you instantly search anything visible on your screen. With an elegant glassmorphic interface and intuitive keyboard shortcuts, it makes finding information faster and more natural than ever.
 
 ## ✨ Key Features
