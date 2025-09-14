@@ -190,16 +190,17 @@ class GeminiService: ObservableObject {
     
     private func buildPrompt(text: String, context: String) -> String {
         let basePrompt = """
-        Please provide a helpful response using proper markdown formatting:
-        - Use **bold** for emphasis and important concepts (but NOT for code)
-        - Use `backticks` for ALL code elements, commands, functions, or technical terms
-        - Never combine bold with backticks - if it's code, use only backticks
-        - IMPORTANT: Always add spaces before and after inline code (e.g., "the `fn` keyword", not "the`fn`keyword")
-        - Use ```language for multi-line code blocks (specify the language)
-        - Use * or - for bullet point lists (with a space after)
-        - Separate different sections with blank lines
-        - Keep explanations clear and well-structured
-        
+        Please provide a helpful and direct response. Format your answer using markdown:
+        - Use **bold** for emphasis on important concepts (never for code)
+        - Use `backticks` for code elements, commands, or technical terms when mentioned
+        - Use bullet points (* or -) for lists when appropriate
+        - Keep your response focused and relevant to the question
+
+        IMPORTANT:
+        - Only include code blocks if specifically relevant to the answer
+        - Do NOT add example code just for demonstration purposes
+        - Focus on answering the user's actual question directly
+
         """
         
         if !context.isEmpty {
