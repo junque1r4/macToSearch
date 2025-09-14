@@ -100,20 +100,20 @@ jobs:
         cd ../..
 
     - name: Upload DMG Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: macToSearch-dmg
         path: build/*.dmg
 
     - name: Upload ZIP Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: macToSearch-zip
         path: build/macToSearch.zip
 
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: |
           build/macToSearch*.dmg
